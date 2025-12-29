@@ -13,7 +13,20 @@
       "Bash(for file in woocommerce-connector-plugin/steps/*.php woocommerce-connector-plugin/StepResult.php)",
       "Bash(do echo:*)",
       "Bash(echo:*)",
-      "Bash(done:*)"
+      "Bash(done:*)",
+      "Read(//Users/jpcabral/.vscode/**)",
+      "Bash(\"https://dk.unifywebservices.com/api/application/ljYl459rIyiXdydiWg7qP/YpqwcVBM-RjNn7w4Zeyhi\" )",
+      "Bash(\"https://dk.unifywebservices.com/api/application/create/ljYl459rIyiXdydiWg7qP/YpqwcVBM-RjNn7w4Zeyhi\" )",
+      "Bash(\"https://dk.unifywebservices.com/api/application-create\" )",
+      "Bash(\"https://dk.unifywebservices.com/api/application-saveGithubProvider/2TTokRxxWhEsOtHpdaCl-\" )",
+      "Bash(\"https://dk.unifywebservices.com/api/application-save-github-provider/2TTokRxxWhEsOtHpdaCl-\" )",
+      "Bash(\"https://dk.unifywebservices.com/api/application-update/2TTokRxxWhEsOtHpdaCl-\" )",
+      "Bash(\"https://dk.unifywebservices.com/api/application-deploy/2TTokRxxWhEsOtHpdaCl-\")",
+      "Bash(\"https://dk.unifywebservices.com/api/application/deploy\" )",
+      "Bash(python3:*)",
+      "Bash(\"https://dk.unifywebservices.com/api/application-clean-queues/2TTokRxxWhEsOtHpdaCl-\")",
+      "Bash(\"https://dk.unifywebservices.com/api/application/redeploy\" )",
+      "Bash(\"https://dk.unifywebservices.com/api/application/save-github\" )"
     ],
     "deny": [],
     "ask": []
