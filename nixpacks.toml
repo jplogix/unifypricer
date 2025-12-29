@@ -1,0 +1,13 @@
+[phases.build]
+cmds = [
+  "bun install",
+  "cd dashboard && npm install",
+  "cd dashboard && npm run build"
+]
+
+[start]
+cmd = "bun src/index.ts"
+
+[variables]
+NODE_ENV = "production"
+PORT = "3000"
