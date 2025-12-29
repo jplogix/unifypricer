@@ -1,12 +1,13 @@
 [phases.build]
 cmds = [
-  "bun install",
+  "yarn install",
+  "yarn build",
   "cd dashboard && npm install",
   "cd dashboard && npm run build"
 ]
 
 [start]
-cmd = "bun src/index.ts"
+cmd = "yarn start"
 
 [variables]
 NODE_ENV = "production"
