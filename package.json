@@ -11,6 +11,9 @@
     "test": "jest",
     "lint": "eslint src --ext .ts,.tsx"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "keywords": [
     "price-sync",
     "woocommerce",
