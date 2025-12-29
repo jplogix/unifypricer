@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { storeService } from '../services/api';
 import type { StoreConfig } from '../types';
 

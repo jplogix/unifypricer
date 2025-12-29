@@ -155,7 +155,7 @@ const OAuthConnect: React.FC<OAuthConnectProps> = ({
     }
   };
 
-  const [showManualCredentials, setShowManualCredentials] = useState(false);
+  const showManualCredentials = false;
   const [credentials, setCredentials] = useState({
     consumerKey: '',
     consumerSecret: ''

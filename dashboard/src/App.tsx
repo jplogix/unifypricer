@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { LayoutDashboard, Plus, RefreshCw, ShoppingBag } from 'lucide-react';
 import StoreCard from './components/StoreCard';
 import StoreConfiguration from './components/StoreConfiguration';

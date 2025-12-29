@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plug, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { Plug, AlertCircle, Loader2 } from 'lucide-react';
 
 interface StoreConnectionProps {
   platform: 'woocommerce' | 'shopify';
@@ -12,7 +12,6 @@ const StoreConnection: React.FC<StoreConnectionProps> = ({ platform, onConnect, 
   const [storeUrl, setStoreUrl] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState<'input' | 'credentials'>('input');
 
   const validateUrl = (url: string): boolean => {
     try {
