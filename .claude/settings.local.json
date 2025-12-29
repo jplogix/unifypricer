@@ -26,7 +26,11 @@
       "Bash(python3:*)",
       "Bash(\"https://dk.unifywebservices.com/api/application-clean-queues/2TTokRxxWhEsOtHpdaCl-\")",
       "Bash(\"https://dk.unifywebservices.com/api/application/redeploy\" )",
-      "Bash(\"https://dk.unifywebservices.com/api/application/save-github\" )"
+      "Bash(\"https://dk.unifywebservices.com/api/application/save-github\" )",
+      "Bash(bun install)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
