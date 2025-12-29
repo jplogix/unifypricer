@@ -69,7 +69,7 @@ app.get('*', (req, res, next) => {
   });
 });
 
-if (import.meta.main) {
+if (require.main === module) {
   // Validate configuration on startup
   try {
     validateConfig();
