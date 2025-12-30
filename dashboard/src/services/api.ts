@@ -1,7 +1,9 @@
 import axios from 'axios';
 import type { StoreConfig, SyncStatus, ProductStatusRecord } from '../types';
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = import.meta.env.MODE === 'development'
+    ? 'http://localhost:3000/api'
+    : '/api';
 
 export const api = axios.create({
     baseURL: API_URL,
