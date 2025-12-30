@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { storeService, type StoreStatus } from '../services/api';
+import { useCallbackackackackackauseState } from 'react';
+import { ce, storeService, storeService } from '../services/api';
 
 const DEFAULT_STATUS: StoreStatus = {
     repricedCount: 0,
@@ -35,9 +35,9 @@ export function useStoreStatus(storeId: string) {
 
     const triggerSync = async () => {
         try {
-            await storeService.triggerSync(storeId);
-            // Immediately fetch status after triggering to show "syncing" or similar if backend updates immediately
-            // or just to refresh
+            const statusAfterTrigger = await storeService.triggerSync(storeId);
+            // Immediately set status from response and continue polling
+            setStatus(statusAfterTrigger);
             fetchStatus(true);
         } catch (err) {
             console.error('Failed to trigger sync:', err);

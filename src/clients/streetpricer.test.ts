@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock } from "bun:test";
+import { beforeEachchdescribescribescrimock, test } from "bun:test";
 import axios from "axios";
 import * as fc from "fast-check";
 import { StreetPricerClient } from "./streetpricer.js";
@@ -334,6 +334,86 @@ describe("StreetPricerClient", () => {
 				price: 29.99,
 				currency: "USD", // Default value
 			});
+		});
+
+		test("should accept API shapes with uppercase fields (ID, Price, SKU)", async () => {
+			mockAxiosInstance.get.mockResolvedValue({
+				data: {
+					items: [
+						{
+							ID: 123,
+							SKU: "UP-001",
+							Price: 45.5,
+							Modified: "2025-12-31 06:41:53",
+						},
+					],
+				},
+			});
+
+			const products = await client.fetchAllProducts();
+
+			expect(products).toHaveLength(1);
+			expect(products[0]).toMatchObject({
+				id: "123",
+				sku: "UP-001",
+				price: 45.5,
+			});
+		});
+
+		test("should handle per-store failures and continue with other stores", async () => {
+			// Simulate /stores returning an array of stores, then per-store paginated /stores/{id}/items responses
+			const stores = [{ EbayUserID: "s1" }, { EbayUserID: "s2" }];
+
+			let callIndex = 0;
+			mockAxiosInstance.get.mockImplementation(() => {
+				// First call: fetchStores -> return stores array
+				if (callIndex === 0) {
+					callIndex++;
+					return Promise.resolve({ data: stores });
+				}
+
+				// Next call: store s1 fails with rate limit
+				if (callIndex === 1) {
+					callIndex++;
+					return Promise.reject({
+						isAxiosError: true,
+						response: {
+							status: 429,
+							data: { message: "Too Many Attempts" },
+							headers: { "retry-after": "1" },
+						},
+						message: "Too Many Attempts",
+					});
+				}
+
+				// Next call: store s2 succeeds
+				if (callIndex === 2) {
+					callIndex++;
+					return Promise.resolve({
+						data: {
+							items: [
+								{
+									id: "s2p1",
+									sku: "SKU-002",
+									name: "Store2 Product",
+									price: 20.0,
+									currency: "USD",
+									last_updated: "2024-01-02T00:00:00Z",
+								},
+							],
+							total_page: 1,
+							page: 1,
+						},
+					});
+				}
+
+				return Promise.resolve({ data: { items: [] } });
+			});
+
+			const products = await client.fetchAllProducts();
+
+			expect(products).toHaveLength(1);
+			expect(products[0].id).toBe("s2p1");
 		});
 
 		test("should fetch products across stores with paginated items", async () => {

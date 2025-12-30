@@ -1,143 +1,144 @@
 // Core domain types
-export type Platform = 'woocommerce' | 'shopify';
-export type SyncStatus = 'success' | 'partial' | 'failed';
-export type ProductSyncStatus = 'repriced' | 'pending' | 'unlisted';
+export type Platform = "woocommerce" | "shopify";
+export type SyncStatus = "success" | "partial" | "failed";
+export type ProductSyncStatus = "repriced" | "pending" | "unlisted";
 
 export enum ErrorType {
-  AUTHENTICATION = 'authentication',
-  NETWORK = 'network',
-  VALIDATION = 'validation',
-  API_LIMIT = 'api_limit',
-  INTERNAL = 'internal',
-  CONFIGURATION = 'configuration'
+	AUTHENTICATION = "authentication",
+	NETWORK = "network",
+	VALIDATION = "validation",
+	API_LIMIT = "api_limit",
+	INTERNAL = "internal",
+	CONFIGURATION = "configuration",
 }
 
 // StreetPricer types
 export interface StreetPricerProduct {
-  id: string;
-  sku: string;
-  name: string;
-  price: number;
-  currency: string;
-  lastUpdated: Date;
+	id: string;
+	sku: string;
+	name: string;
+	price: number;
+	currency: string;
+	lastUpdated: Date;
 }
 
 // WooCommerce types
 export interface WooCommerceProduct {
-  id: number;
-  sku: string;
-  name: string;
-  price: string;
-  regularPrice: string;
+	id: number;
+	sku: string;
+	name: string;
+	price: string;
+	regularPrice: string;
 }
 
 // Shopify types
 export interface ShopifyProduct {
-  id: number;
-  variants: ShopifyVariant[];
+	id: number;
+	variants: ShopifyVariant[];
 }
 
 export interface ShopifyVariant {
-  id: number;
-  sku: string;
-  title: string;
-  price: string;
+	id: number;
+	sku: string;
+	title: string;
+	price: string;
 }
 
 // Product matching types
 export interface ProductMatch {
-  streetPricerProduct: StreetPricerProduct;
-  platformProduct: WooCommerceProduct | ShopifyVariant;
-  matchConfidence: number;
+	streetPricerProduct: StreetPricerProduct;
+	platformProduct: WooCommerceProduct | ShopifyVariant;
+	matchConfidence: number;
 }
 
 export interface ProductMatchResult {
-  matched: ProductMatch[];
-  unlisted: StreetPricerProduct[];
+	matched: ProductMatch[];
+	unlisted: StreetPricerProduct[];
 }
 
 // Store configuration types
 export interface StoreConfig {
-  storeId: string;
-  storeName: string;
-  platform: Platform;
-  credentials: EncryptedCredentials;
-  syncInterval: number;
-  enabled: boolean;
+	storeId: string;
+	storeName: string;
+	platform: Platform;
+	credentials: EncryptedCredentials;
+	syncInterval: number;
+	enabled: boolean;
 }
 
 export interface EncryptedCredentials {
-  encrypted: string;
-  iv: string;
+	encrypted: string;
+	iv: string;
 }
 
 // Sync result types
 export interface SyncError {
-  productId: string;
-  errorMessage: string;
-  errorType: ErrorType;
+	productId: string;
+	errorMessage: string;
+	errorType: ErrorType;
 }
 
 export interface StoreSyncResult {
-  storeId: string;
-  storeName: string;
-  platform: Platform;
-  repricedCount: number;
-  pendingCount: number;
-  unlistedCount: number;
-  errors: SyncError[];
-  timestamp: Date;
+	storeId: string;
+	storeName: string;
+	platform: Platform;
+	repricedCount: number;
+	pendingCount: number;
+	unlistedCount: number;
+	errors: SyncError[];
+	timestamp: Date;
+	status?: SyncStatus;
 }
 
 export interface SyncResult {
-  stores: StoreSyncResult[];
-  startTime: Date;
-  endTime: Date;
-  overallStatus: SyncStatus;
+	stores: StoreSyncResult[];
+	startTime: Date;
+	endTime: Date;
+	overallStatus: SyncStatus;
 }
 
 // Product status types
 export interface ProductStatus {
-  productId: string;
-  status: ProductSyncStatus;
-  lastAttempt: Date;
-  lastSuccess: Date | null;
-  errorMessage: string | null;
+	productId: string;
+	status: ProductSyncStatus;
+	lastAttempt: Date;
+	lastSuccess: Date | null;
+	errorMessage: string | null;
 }
 
 // Database record types
 export interface Store {
-  id: string;
-  name: string;
-  platform: Platform;
-  syncInterval: number;
-  enabled: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+	id: string;
+	name: string;
+	platform: Platform;
+	syncInterval: number;
+	enabled: boolean;
+	createdAt: Date;
+	updatedAt: Date;
 }
 
 export interface SyncHistoryRecord {
-  id: number;
-  storeId: string;
-  repricedCount: number;
-  pendingCount: number;
-  unlistedCount: number;
-  status: SyncStatus;
-  errorMessage?: string;
-  startedAt: Date;
-  completedAt: Date;
+	id: number;
+	storeId: string;
+	repricedCount: number;
+	pendingCount: number;
+	unlistedCount: number;
+	status: SyncStatus;
+	errorMessage?: string;
+	startedAt: Date;
+	completedAt: Date;
 }
 
 export interface ProductStatusRecord {
-  id: number;
-  storeId: string;
-  platformProductId: string;
-  streetpricerProductId: string;
-  sku: string;
-  status: ProductSyncStatus;
-  lastAttempt: Date;
-  lastSuccess?: Date;
-  errorMessage?: string;
-  currentPrice: number;
-  targetPrice: number;
+	id: number;
+	storeId: string;
+	platformProductId: string;
+	streetpricerProductId: string;
+	sku: string;
+	status: ProductSyncStatus;
+	lastAttempt: Date;
+	lastSuccess?: Date;
+	errorMessage?: string;
+	currentPrice: number;
+	targetPrice: number;
 }

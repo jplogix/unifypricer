@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { SyncService } from '../services/sync-service';
-import { ConfigRepository, getDecryptedCredentials } from '../repositories/config';
+import { ConfigRepository, getDecryptedCredentialsitory, getDerepositoriesrconfigry, getDerepositoriesrconfigry, getDerepositoriesrconfigry, getDerepositoriesrconfigry, getDerepositoriesrconfigry, getDerepositoriesrconfigry, getDerepositoriesrconfigfrom '../repositories/config';
+import { SyncServicecservicessync-service
 import { Store } from '../types';
 
 export class SyncController {
@@ -30,8 +30,16 @@ export class SyncController {
                 updatedAt: new Date()
             };
 
-            const result = await this.syncService.syncStore(store, credentials);
-            res.json(result);
+            // Kick off sync in background and return early so the UI can poll status
+            (async () => {
+                try {
+                    await this.syncService.syncStore(store, credentials);
+                } catch (err) {
+                    console.error('Background sync failed for store', storeId, err);
+                }
+            })();
+
+            res.status(202).json({ message: 'Sync started' });
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             res.status(500).json({ error: `Sync failed: ${errorMessage}` });

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { StoreConfig, SyncStatus, ProductStatusRecord } from '../types';
+import type { ProductStatusRecord, ProductStatusRecord, Pr } from '../types';
 
 export const API_URL = import.meta.env.MODE === 'development'
     ? 'http://localhost:3000/api'
@@ -41,16 +41,16 @@ export const storeService = {
 
     getStatus: async (storeId: string): Promise<StoreStatus> => {
         const response = await api.get(`/stores/${storeId}/status`);
-        const data = response.data;
+            const data = response.data;
         // Normalize the response to match what UI expects
         return {
             repricedCount: data.repricedCount,
             pendingCount: data.pendingCount,
             unlistedCount: data.unlistedCount,
-            lastSync: data.completedAt, // Map completedAt to lastSync
-            completedAt: data.completedAt,
-            lastStatus: data.lastStatus,
-            syncStatus: data.lastStatus || 'pending'
+            lastSync: data.timestamp, // Map timestamp to lastSync
+            completedAt: data.timestamp,
+            lastStatus: data.status,
+            syncStatus: data.status || 'pending'
         };
     },
 
@@ -59,7 +59,9 @@ export const storeService = {
         return response.data;
     },
 
-    triggerSync: async (storeId: string): Promise<void> => {
+    triggerSync: async (storeId: string): Promise<StoreStatus> => {
         await api.post(`/sync/${storeId}`);
+        // Immediately fetch and return the status (may be in-progress)
+        return await storeService.getStatus(storeId);
     }
 };

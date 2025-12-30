@@ -29,6 +29,8 @@ describe('SyncService', () => {
             matchProducts: mock(() => ({ matched: [], unlisted: [] }))
         };
         mockStatusRepo = {
+            startSync: mock(() => Promise.resolve()),
+            updateSyncProgress: mock(() => Promise.resolve()),
             updateProductStatus: mock(() => Promise.resolve()),
             saveSyncResult: mock(() => Promise.resolve())
         };
@@ -63,6 +65,17 @@ describe('SyncService', () => {
     });
 
     describe('Property-Based Tests', () => {
+        it('should start an in-progress sync entry when sync begins', async () => {
+            const store: Store = {
+                id: 'store-1', name: 'Store', platform: 'woocommerce',
+                syncInterval: 60, enabled: true,
+                createdAt: new Date(), updatedAt: new Date()
+            } as any;
+
+            await syncService.syncStore(store);
+
+            expect(mockStatusRepo.startSync).toHaveBeenCalledWith('store-1');
+        });
         // Feature: price-sync-dashboard, Property 10.2: Price update on difference
         // Validates: Requirement 4.1, 5.1
         it('Property 10.2: For any matched products with price difference > threshold, system should trigger update', async () => {
@@ -141,6 +154,8 @@ describe('SyncService', () => {
                         expect(mockStatusRepo.updateProductStatus).toHaveBeenCalledWith(
                             'store-1', '1', 'sp-1', expect.anything(), 'repriced', expect.any(Number), targetPrice
                         );
+
+                        expect(mockStatusRepo.updateSyncProgress).toHaveBeenCalled();
                     }
                 )
             );
@@ -175,6 +190,8 @@ describe('SyncService', () => {
                         expect(mockStatusRepo.updateProductStatus).toHaveBeenCalledWith(
                             'store-1', '1', 'sp-1', expect.anything(), 'pending', expect.any(Number), 20, errorMessage
                         );
+
+                        expect(mockStatusRepo.updateSyncProgress).toHaveBeenCalled();
                     }
                 )
             );

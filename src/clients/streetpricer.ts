@@ -124,13 +124,19 @@ export class StreetPricerClient implements IStreetPricerClient {
 				// Prefer fetching per-store so we aggregate both eBay stores
 				return await this.fetchProductsAcrossStores();
 			} catch (error) {
-				// If per-store fetch fails (e.g., endpoint mismatch), fall back to legacy /products
-				console.warn(
-					"[StreetPricer] Per-store fetch failed, falling back to products endpoint:",
-					this.getErrorMessage(error),
-				);
+				const message = this.getErrorMessage(error);
+				// Only fallback to legacy /products endpoint if we received a 404 indicating endpoint not present
+				if (message.includes("endpoint not found") || message.includes("404")) {
+					console.warn(
+						"[StreetPricer] Per-store endpoint not found, falling back to products endpoint:",
+						message,
+					);
 
-				return await this.fetchProductsFromEndpoint(this.productsEndpoint);
+					return await this.fetchProductsFromEndpoint(this.productsEndpoint);
+				}
+
+				// Otherwise, surface the original error (e.g., rate limit) so caller can handle partial failures
+				throw error;
 			}
 		});
 	}
@@ -171,6 +177,7 @@ export class StreetPricerClient implements IStreetPricerClient {
 		}
 
 		const allProducts: StreetPricerProduct[] = [];
+		const storeErrors: string[] = [];
 
 		for (const store of stores) {
 			const rawId =
@@ -189,16 +196,33 @@ export class StreetPricerClient implements IStreetPricerClient {
 			// StreetPricer exposes per-store products under /stores/{storeId}/items (paginated)
 			const endpoint = `${this.storesEndpoint.replace(/\/$/, "")}/${encodeURIComponent(storeId)}/items`;
 
-			const storeProducts = await this.fetchProductsFromEndpoint(endpoint);
-			allProducts.push(...storeProducts);
-			console.log(
-				`[StreetPricer] Fetched ${storeProducts.length} products from store ${storeId}`,
-			);
+			try {
+				const storeProducts = await this.fetchProductsFromEndpoint(endpoint);
+				allProducts.push(...storeProducts);
+				console.log(
+					`[StreetPricer] Fetched ${storeProducts.length} products from store ${storeId}`,
+				);
+			} catch (err: any) {
+				const msg = this.getErrorMessage(err);
+				console.error(
+					`[StreetPricer] Failed to fetch products for store ${storeId}: ${msg}`,
+				);
+				storeErrors.push(`${storeId}: ${msg}`);
+				// continue with other stores
+				continue;
+			}
 		}
 
 		console.log(
 			`[StreetPricer] Aggregated ${allProducts.length} products across ${stores.length} stores`,
 		);
+
+		if (allProducts.length === 0 && storeErrors.length > 0) {
+			throw new Error(
+				`Per-store fetch failed for all stores: ${storeErrors.join("; ")}`,
+			);
+		}
+
 		return allProducts;
 	}
 
@@ -322,29 +346,52 @@ export class StreetPricerClient implements IStreetPricerClient {
 	 * Validates: Requirement 1.4
 	 */
 	private validateAndTransformProduct(
-		product: StreetPricerApiProduct,
+		product: any,
 	): StreetPricerProduct | null {
-		// Check required fields
-		if (!product.id || typeof product.id !== "string") {
+		// Flexible extraction for various API shapes (ID, id, ItemID, SKU, Price, NewPrice, Modified)
+		const idRaw =
+			product?.id ??
+			product?.ID ??
+			product?.ItemID ??
+			product?.NewItemID ??
+			product?.IPN;
+		const id = idRaw !== undefined && idRaw !== null ? String(idRaw) : "";
+		if (!id) {
 			console.warn("[StreetPricer] Product missing or invalid id:", product);
 			return null;
 		}
 
-		if (typeof product.price !== "number" || isNaN(product.price)) {
+		// Price heuristics: prefer 'price' (lowercase), fallback to 'Price' or 'NewPrice' or 'ConvertedPrice'
+		const priceRaw =
+			product?.price ??
+			product?.Price ??
+			product?.NewPrice ??
+			product?.ConvertedPrice;
+		const price =
+			typeof priceRaw === "number"
+				? priceRaw
+				: typeof priceRaw === "string"
+					? parseFloat(priceRaw)
+					: NaN;
+		if (typeof price !== "number" || isNaN(price)) {
 			console.warn("[StreetPricer] Product missing or invalid price:", product);
 			return null;
 		}
 
-		// Transform to internal format
+		const sku = product?.sku ?? product?.SKU ?? "";
+		const name = product?.name ?? product?.Title ?? product?.ListingTitle ?? "";
+		const currency = product?.currency ?? product?.PriceCurr ?? "USD";
+		const lastUpdatedRaw =
+			product?.last_updated ?? product?.Modified ?? product?.GTINUpdated;
+		const lastUpdated = lastUpdatedRaw ? new Date(lastUpdatedRaw) : new Date();
+
 		return {
-			id: product.id,
-			sku: product.sku || "",
-			name: product.name || "",
-			price: product.price,
-			currency: product.currency || "USD",
-			lastUpdated: product.last_updated
-				? new Date(product.last_updated)
-				: new Date(),
+			id,
+			sku: sku || "",
+			name: name || "",
+			price,
+			currency,
+			lastUpdated,
 		};
 	}
 
@@ -374,11 +421,22 @@ export class StreetPricerClient implements IStreetPricerClient {
 			}
 
 			// Calculate delay with exponential backoff
-			const delay = Math.min(
+			let delay = Math.min(
 				this.retryConfig.initialDelayMs *
 					Math.pow(this.retryConfig.backoffMultiplier, attempt - 1),
 				this.retryConfig.maxDelayMs,
 			);
+
+			// If the API returned a Retry-After header for rate limiting, respect it (in seconds)
+			if (axios.isAxiosError(error) && error.response?.status === 429) {
+				const retryAfter = error.response.headers?.["retry-after"];
+				if (retryAfter) {
+					const seconds = parseInt(String(retryAfter), 10);
+					if (!Number.isNaN(seconds)) {
+						delay = Math.max(delay, seconds * 1000);
+					}
+				}
+			}
 
 			console.log(
 				`[StreetPricer] Retry attempt ${attempt}/${this.retryConfig.maxAttempts} after ${delay}ms`,
