@@ -27,12 +27,31 @@ export class StoreController {
         const { storeId } = req.params;
         try {
             const status = await this.statusRepository.getLatestSyncStatus(storeId);
-            if (!status) {
-                res.status(404).json({ error: 'Status not found' });
+            if (status) {
+                res.json(status);
                 return;
             }
-            res.json(status);
+
+            // If no status found, check if store exists
+            const config = this.configRepository.getStoreConfig(storeId);
+            if (!config) {
+                res.status(404).json({ error: 'Store not found' });
+                return;
+            }
+
+            // Return default status for new stores
+            res.json({
+                storeId: config.storeId,
+                storeName: config.storeName,
+                platform: config.platform,
+                repricedCount: 0,
+                pendingCount: 0,
+                unlistedCount: 0,
+                errors: [],
+                timestamp: new Date()
+            });
         } catch (error) {
+            console.error('Failed to fetch store status:', error);
             res.status(500).json({ error: 'Failed to fetch store status' });
         }
     };

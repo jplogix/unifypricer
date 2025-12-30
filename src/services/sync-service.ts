@@ -27,7 +27,7 @@ import { AppError, ErrorType } from '../utils/errors.js';
 import { Logger } from '../utils/logger.js';
 
 export interface ISyncService {
-    syncStore(store: Store): Promise<StoreSyncResult>;
+    syncStore(store: Store, credentials?: any): Promise<StoreSyncResult>;
 }
 
 export class SyncService implements ISyncService {
@@ -44,7 +44,7 @@ export class SyncService implements ISyncService {
         }
     ) { }
 
-    async syncStore(store: Store): Promise<StoreSyncResult> {
+    async syncStore(store: Store, credentials?: any): Promise<StoreSyncResult> {
         this.logger.info(`Starting sync for store ${store.id}`, { storeId: store.id });
         const errors: SyncError[] = [];
         let repricedCount = 0;
@@ -59,16 +59,16 @@ export class SyncService implements ISyncService {
             let platformProducts: (WooCommerceProduct | ShopifyVariant)[] = [];
             let platformClient: IWooCommerceClient | IShopifyClient;
 
-            const credentials = this.parseCredentials(store);
+            const authCredentials = credentials || this.parseCredentials(store);
 
             if (store.platform === 'woocommerce') {
-                const client = this.platformClients.woocommerce(credentials);
-                await client.authenticate(credentials.url, credentials.consumerKey, credentials.consumerSecret);
+                const client = this.platformClients.woocommerce(authCredentials);
+                await client.authenticate(authCredentials.url, authCredentials.consumerKey, authCredentials.consumerSecret);
                 platformProducts = await client.getAllProducts();
                 platformClient = client;
             } else if (store.platform === 'shopify') {
-                const client = this.platformClients.shopify(credentials);
-                await client.authenticate(credentials.shopDomain, credentials.accessToken);
+                const client = this.platformClients.shopify(authCredentials);
+                await client.authenticate(authCredentials.shopDomain, authCredentials.accessToken);
                 const shopsProducts = await client.getAllProducts();
                 platformProducts = shopsProducts.flatMap(p => p.variants);
                 platformClient = client;
@@ -190,7 +190,7 @@ export class SyncService implements ISyncService {
     }
 
     private parseCredentials(store: Store): any {
-        // Mock implementation for credential parsing
+        // Fallback for mock/legacy
         if (store.platform === 'woocommerce') {
             return {
                 url: 'https://mock-url.com',

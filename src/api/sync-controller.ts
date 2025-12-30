@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { SyncService } from '../services/sync-service';
-import { ConfigRepository } from '../repositories/config';
+import { ConfigRepository, getDecryptedCredentials } from '../repositories/config';
 import { Store } from '../types';
 
 export class SyncController {
@@ -18,10 +18,8 @@ export class SyncController {
                 return;
             }
 
-            // Convert StoreConfig to Store object expected by SyncService
-            // Note: SyncService currently uses mocked credentials internally, 
-            // but in a real app we would decrypt and pass them or SyncService would handle it.
-            // Here we map available fields.
+            const credentials = getDecryptedCredentials(config);
+
             const store: Store = {
                 id: config.storeId,
                 name: config.storeName,
@@ -32,7 +30,7 @@ export class SyncController {
                 updatedAt: new Date()
             };
 
-            const result = await this.syncService.syncStore(store);
+            const result = await this.syncService.syncStore(store, credentials);
             res.json(result);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);

@@ -1,4 +1,4 @@
-import { ConfigRepository } from '../repositories/config';
+import { ConfigRepository, getDecryptedCredentials } from '../repositories/config';
 import { StatusRepository } from '../repositories/status';
 import { SyncService } from './sync-service';
 import { Store } from '../types';
@@ -69,8 +69,10 @@ export class SchedulerService {
                             updatedAt: new Date()
                         };
 
+                        const credentials = getDecryptedCredentials(config);
+
                         // Fire and forget, but handle rejection
-                        this.syncService.syncStore(store)
+                        this.syncService.syncStore(store, credentials)
                             .then(() => {
                                 this.logger.info(`Sync completed for store ${config.storeId}`);
                             })
