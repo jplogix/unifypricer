@@ -17,6 +17,14 @@ interface StreetPricerApiProduct {
   last_updated: string;
 }
 
+interface StreetPricerStore {
+  id?: string | number;
+  storeId?: string | number;
+  store_id?: string | number;
+  name?: string;
+  [key: string]: unknown;
+}
+
 interface RetryConfig {
   maxAttempts: number;
   initialDelayMs: number;
@@ -28,6 +36,7 @@ export class StreetPricerClient implements IStreetPricerClient {
   private client: AxiosInstance;
   private authenticated: boolean = false;
   private authToken: string | null = null;
+  private storesEndpoint: string;
   private productsEndpoint: string;
   private retryConfig: RetryConfig = {
     maxAttempts: 3,
@@ -40,8 +49,13 @@ export class StreetPricerClient implements IStreetPricerClient {
     private username: string = config.streetPricer.apiKey,
     private password: string = config.streetPricer.apiSecret,
     private apiUrl: string = config.streetPricer.apiUrl,
+    storesEndpoint: string = config.streetPricer.storesEndpoint || '/stores',
     productsEndpoint: string = config.streetPricer.productsEndpoint || '/products'
   ) {
+    this.storesEndpoint = storesEndpoint.startsWith('/')
+      ? storesEndpoint
+      : `/${storesEndpoint}`;
+
     this.productsEndpoint = productsEndpoint.startsWith('/')
       ? productsEndpoint
       : `/${productsEndpoint}`;
@@ -101,32 +115,16 @@ export class StreetPricerClient implements IStreetPricerClient {
 
     return this.retryWithBackoff(async () => {
       try {
-        const response = await this.client.get<{ products: StreetPricerApiProduct[] }>(
-          this.productsEndpoint
-        );
-
-        const products = response.data.products;
-
-        // Validate and transform products
-        const validatedProducts = products
-          .map((product) => this.validateAndTransformProduct(product))
-          .filter((product): product is StreetPricerProduct => product !== null);
-
-        console.log(
-          `[StreetPricer] Fetched ${validatedProducts.length} valid products (${products.length} total)`
-        );
-
-        return validatedProducts;
+        // Prefer fetching per-store so we aggregate both eBay stores
+        return await this.fetchProductsAcrossStores();
       } catch (error) {
-        const errorMessage = this.getErrorMessage(error);
-        const endpointUrl = `${this.apiUrl.replace(/\/$/, '')}${this.productsEndpoint}`;
-        const isNotFound = axios.isAxiosError(error) && error.response?.status === 404;
-        const guidance = isNotFound
-          ? ` (endpoint not found at ${endpointUrl}. Verify STREETPRICER_API_URL and STREETPRICER_PRODUCTS_ENDPOINT from the StreetPricer docs).`
-          : '';
+        // If per-store fetch fails (e.g., endpoint mismatch), fall back to legacy /products
+        console.warn(
+          '[StreetPricer] Per-store fetch failed, falling back to products endpoint:',
+          this.getErrorMessage(error)
+        );
 
-        console.error('[StreetPricer] Failed to fetch products:', `${errorMessage}${guidance}`);
-        throw new Error(`Failed to fetch StreetPricer products: ${errorMessage}${guidance}`);
+        return await this.fetchProductsFromEndpoint(this.productsEndpoint);
       }
     });
   }
@@ -141,25 +139,7 @@ export class StreetPricerClient implements IStreetPricerClient {
 
     return this.retryWithBackoff(async () => {
       try {
-        const response = await this.client.get<{ products: StreetPricerApiProduct[] }>(
-          this.productsEndpoint,
-          {
-            params: { category },
-          }
-        );
-
-        const products = response.data.products;
-
-        // Validate and transform products
-        const validatedProducts = products
-          .map((product) => this.validateAndTransformProduct(product))
-          .filter((product): product is StreetPricerProduct => product !== null);
-
-        console.log(
-          `[StreetPricer] Fetched ${validatedProducts.length} valid products in category "${category}"`
-        );
-
-        return validatedProducts;
+        return await this.fetchProductsFromEndpoint(this.productsEndpoint, { category });
       } catch (error) {
         const errorMessage = this.getErrorMessage(error);
         console.error(
@@ -169,6 +149,92 @@ export class StreetPricerClient implements IStreetPricerClient {
         throw error;
       }
     });
+  }
+
+  /**
+   * Fetch all products across all StreetPricer stores
+   */
+  private async fetchProductsAcrossStores(): Promise<StreetPricerProduct[]> {
+    const stores = await this.fetchStores();
+    if (!stores.length) {
+      throw new Error('No stores returned from StreetPricer');
+    }
+
+    const allProducts: StreetPricerProduct[] = [];
+
+    for (const store of stores) {
+      const rawId = store.id ?? store.storeId ?? store.store_id;
+      const storeId = rawId !== undefined && rawId !== null ? String(rawId).trim() : '';
+      if (!storeId) {
+        console.warn('[StreetPricer] Skipping store with missing id', store);
+        continue;
+      }
+
+      const endpoint = `${this.storesEndpoint.replace(/\/$/, '')}/${encodeURIComponent(storeId)}/products`;
+      const storeProducts = await this.fetchProductsFromEndpoint(endpoint);
+      allProducts.push(...storeProducts);
+      console.log(`[StreetPricer] Fetched ${storeProducts.length} products from store ${storeId}`);
+    }
+
+    console.log(`[StreetPricer] Aggregated ${allProducts.length} products across ${stores.length} stores`);
+    return allProducts;
+  }
+
+  /**
+   * Fetch list of StreetPricer stores
+   */
+  private async fetchStores(): Promise<StreetPricerStore[]> {
+    try {
+      const response = await this.client.get<{ stores: StreetPricerStore[] }>(
+        this.storesEndpoint
+      );
+      return Array.isArray(response.data?.stores) ? response.data.stores : [];
+    } catch (error) {
+      const errorMessage = this.getErrorMessage(error);
+      const endpointUrl = `${this.apiUrl.replace(/\/$/, '')}${this.storesEndpoint}`;
+      console.error(
+        '[StreetPricer] Failed to fetch stores:',
+        `${errorMessage} (endpoint: ${endpointUrl})`
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch products from a specific endpoint and validate/transform
+   */
+  private async fetchProductsFromEndpoint(
+    endpoint: string,
+    params?: Record<string, unknown>
+  ): Promise<StreetPricerProduct[]> {
+    try {
+      const response = await this.client.get<{ products: StreetPricerApiProduct[] }>(
+        endpoint,
+        { params }
+      );
+
+      const products = response.data.products || [];
+
+      const validatedProducts = products
+        .map((product) => this.validateAndTransformProduct(product))
+        .filter((product): product is StreetPricerProduct => product !== null);
+
+      console.log(
+        `[StreetPricer] Fetched ${validatedProducts.length} valid products (${products.length} total) from ${endpoint}`
+      );
+
+      return validatedProducts;
+    } catch (error) {
+      const errorMessage = this.getErrorMessage(error);
+      const endpointUrl = `${this.apiUrl.replace(/\/$/, '')}${endpoint}`;
+      const isNotFound = axios.isAxiosError(error) && error.response?.status === 404;
+      const guidance = isNotFound
+        ? ` (endpoint not found at ${endpointUrl}. Verify STREETPRICER_API_URL, STREETPRICER_STORES_ENDPOINT, and STREETPRICER_PRODUCTS_ENDPOINT from the StreetPricer docs).`
+        : ` (endpoint: ${endpointUrl})`;
+
+      console.error('[StreetPricer] Failed to fetch products:', `${errorMessage}${guidance}`);
+      throw new Error(`Failed to fetch StreetPricer products: ${errorMessage}${guidance}`);
+    }
   }
 
   /**
