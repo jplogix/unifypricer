@@ -13,7 +13,7 @@ export interface AuditLogEntry {
 export class AuditRepository {
     constructor(private dbPath?: string) { }
 
-    private getDb(): Database {
+    private getDb(): Database.Database {
         const connection = getDatabaseConnection(this.dbPath);
         return connection.getDatabase();
     }

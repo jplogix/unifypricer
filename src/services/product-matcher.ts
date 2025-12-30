@@ -36,7 +36,7 @@ export class ProductMatcher implements IProductMatcher {
     // Build lookup maps for platform products
     for (const platformProduct of platformProducts) {
       const sku = platformProduct.sku;
-      
+
       // Skip products without SKU
       if (!sku || sku.trim() === '') {
         continue;
@@ -65,7 +65,7 @@ export class ProductMatcher implements IProductMatcher {
       }
 
       let matchedProduct: WooCommerceProduct | ShopifyVariant | undefined;
-      let confidence: number;
+      let confidence: number = 0;
 
       // Try exact SKU match first
       matchedProduct = exactSkuMap.get(sku);

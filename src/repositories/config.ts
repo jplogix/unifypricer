@@ -9,9 +9,9 @@ import type { StoreConfig, Platform, EncryptedCredentials } from '../types';
  */
 
 export class ConfigRepository {
-  constructor(private explicitDb?: Database) { }
+  constructor(private explicitDb?: Database.Database) { }
 
-  private get db(): Database {
+  private get db(): Database.Database {
     if (this.explicitDb) {
       return this.explicitDb;
     }
@@ -26,7 +26,7 @@ export class ConfigRepository {
    */
   getStoreConfig(storeId: string): StoreConfig | null {
     try {
-      const query = this.db.query(`
+      const query = this.db.prepare(`
         SELECT id, name, platform, credentials_encrypted, credentials_iv, 
                sync_interval, enabled
         FROM stores
@@ -59,7 +59,7 @@ export class ConfigRepository {
    */
   getAllStoreConfigs(): StoreConfig[] {
     try {
-      const query = this.db.query(`
+      const query = this.db.prepare(`
         SELECT id, name, platform, credentials_encrypted, credentials_iv, 
                sync_interval, enabled
         FROM stores
@@ -109,7 +109,7 @@ export class ConfigRepository {
    */
   deleteStoreConfig(storeId: string): void {
     try {
-      const query = this.db.query(`
+      const query = this.db.prepare(`
         DELETE FROM stores
         WHERE id = ?
       `);
@@ -125,7 +125,7 @@ export class ConfigRepository {
    * @private
    */
   private insertStoreConfig(config: StoreConfig): void {
-    const query = this.db.query(`
+    const query = this.db.prepare(`
       INSERT INTO stores (
         id, name, platform, credentials_encrypted, credentials_iv,
         sync_interval, enabled, created_at, updated_at
@@ -148,7 +148,7 @@ export class ConfigRepository {
    * @private
    */
   private updateStoreConfig(config: StoreConfig): void {
-    const query = this.db.query(`
+    const query = this.db.prepare(`
       UPDATE stores
       SET name = ?,
           platform = ?,

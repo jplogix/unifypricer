@@ -5,7 +5,7 @@ import { Logger } from '../utils/logger';
 const logger = new Logger('ErrorHandler');
 
 export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction) {
-    logger.error(`Error processing request ${req.method} ${req.url}: ${err instanceof Error ? err.message : String(err)}`, err instanceof Error ? err.stack : undefined);
+    logger.error(`Error processing request ${req.method} ${req.url}: ${err instanceof Error ? err.message : String(err)}`, err instanceof Error ? { stack: err.stack } : undefined);
 
     // Default to 500 if not specified
     const statusCode = err.status || err.statusCode || 500;

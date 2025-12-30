@@ -6,7 +6,7 @@ import fs from 'fs';
  * Database connection utility with proper error handling
  */
 export class DatabaseConnection {
-  private db: Database | null = null;
+  private db: Database.Database | null = null;
   private dbPath: string;
 
   constructor(dbPath: string = process.env.DATABASE_PATH || './data/price-sync.db') {
@@ -16,7 +16,7 @@ export class DatabaseConnection {
   /**
    * Initialize database connection and create schema if needed
    */
-  connect(): Database {
+  connect(): Database.Database {
     try {
       // Ensure data directory exists
       const dir = path.dirname(this.dbPath);
@@ -28,7 +28,7 @@ export class DatabaseConnection {
       this.db = new Database(this.dbPath);
 
       // Enable foreign keys
-      this.db.run('PRAGMA foreign_keys = ON');
+      this.db.pragma('foreign_keys = ON');
 
       // Initialize schema
       this.initializeSchema();
@@ -42,7 +42,7 @@ export class DatabaseConnection {
   /**
    * Get the database instance
    */
-  getDatabase(): Database {
+  getDatabase(): Database.Database {
     if (!this.db) {
       throw new Error('Database not connected. Call connect() first.');
     }
@@ -73,7 +73,7 @@ export class DatabaseConnection {
 
     try {
       // Create stores table
-      this.db.run(`
+      this.db.exec(`
         CREATE TABLE IF NOT EXISTS stores (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
@@ -88,7 +88,7 @@ export class DatabaseConnection {
       `);
 
       // Create sync_history table
-      this.db.run(`
+      this.db.exec(`
         CREATE TABLE IF NOT EXISTS sync_history (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           store_id TEXT NOT NULL,
@@ -104,7 +104,7 @@ export class DatabaseConnection {
       `);
 
       // Create product_status table
-      this.db.run(`
+      this.db.exec(`
         CREATE TABLE IF NOT EXISTS product_status (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           store_id TEXT NOT NULL,
@@ -123,7 +123,7 @@ export class DatabaseConnection {
       `);
 
       // Create audit_logs table
-      this.db.run(`
+      this.db.exec(`
         CREATE TABLE IF NOT EXISTS audit_logs (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           store_id TEXT NOT NULL,
@@ -154,25 +154,25 @@ export class DatabaseConnection {
 
     try {
       // Index for sync_history queries by store_id
-      this.db.run(`
+      this.db.exec(`
         CREATE INDEX IF NOT EXISTS idx_sync_history_store_id 
         ON sync_history(store_id)
       `);
 
       // Index for sync_history queries by completion time (for latest sync)
-      this.db.run(`
+      this.db.exec(`
         CREATE INDEX IF NOT EXISTS idx_sync_history_completed_at 
         ON sync_history(completed_at DESC)
       `);
 
       // Index for product_status queries by store_id
-      this.db.run(`
+      this.db.exec(`
         CREATE INDEX IF NOT EXISTS idx_product_status_store_id 
         ON product_status(store_id)
       `);
 
       // Index for product_status queries by status (for filtering)
-      this.db.run(`
+      this.db.exec(`
         CREATE INDEX IF NOT EXISTS idx_product_status_status 
         ON product_status(status)
       `);
@@ -205,7 +205,7 @@ export function getDatabaseConnection(dbPath?: string): DatabaseConnection {
 /**
  * Initialize and connect to the database
  */
-export function initializeDatabase(dbPath?: string): Database {
+export function initializeDatabase(dbPath?: string): Database.Database {
   const connection = getDatabaseConnection(dbPath);
   return connection.connect();
 }

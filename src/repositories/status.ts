@@ -15,7 +15,7 @@ import {
 export class StatusRepository {
   constructor(private dbPath?: string) { }
 
-  private getDb(): Database {
+  private getDb(): Database.Database {
     const connection = getDatabaseConnection(this.dbPath);
     return connection.getDatabase();
   }
@@ -242,9 +242,9 @@ export class StatusRepository {
     try {
       const db = this.getDb();
 
-      const repriced = db.query('SELECT COUNT(*) as count FROM product_status WHERE store_id = ? AND status = ?').get(storeId, 'repriced') as { count: number } | null;
-      const pending = db.query('SELECT COUNT(*) as count FROM product_status WHERE store_id = ? AND status = ?').get(storeId, 'pending') as { count: number } | null;
-      const unlisted = db.query('SELECT COUNT(*) as count FROM product_status WHERE store_id = ? AND status = ?').get(storeId, 'unlisted') as { count: number } | null;
+      const repriced = db.prepare('SELECT COUNT(*) as count FROM product_status WHERE store_id = ? AND status = ?').get(storeId, 'repriced') as { count: number } | null;
+      const pending = db.prepare('SELECT COUNT(*) as count FROM product_status WHERE store_id = ? AND status = ?').get(storeId, 'pending') as { count: number } | null;
+      const unlisted = db.prepare('SELECT COUNT(*) as count FROM product_status WHERE store_id = ? AND status = ?').get(storeId, 'unlisted') as { count: number } | null;
 
       return {
         repriced: repriced?.count || 0,

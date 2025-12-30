@@ -6,6 +6,7 @@ interface OAuthState {
   storeUrl: string;
   platform: 'shopify' | 'woocommerce';
   timestamp: number;
+  [key: string]: any; // Allow additional properties
 }
 
 const oauthStates = new Map<string, OAuthState>();
@@ -120,7 +121,7 @@ export class OAuthController {
         throw new Error('Failed to exchange code for access token');
       }
 
-      const tokenData = await tokenResponse.json();
+      const tokenData = await tokenResponse.json() as any;
 
       // Return success with store data
       const storeData = {
@@ -137,6 +138,8 @@ export class OAuthController {
       const oauthResultKey = `shopify-result-${state}`;
       oauthStates.set(oauthResultKey, {
         ...storeData,
+        storeUrl: `https://${shop}`,
+        timestamp: Date.now(),
         _timestamp: Date.now(),
         _type: 'oauth-success'
       });
@@ -430,7 +433,7 @@ export class OAuthController {
         throw new Error(`Token exchange failed: ${errorText}`);
       }
 
-      const tokenData = await tokenResponse.json();
+      const tokenData = await tokenResponse.json() as any;
 
       // Create store data
       const storeData = {
