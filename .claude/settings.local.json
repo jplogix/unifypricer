@@ -32,7 +32,8 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(yarn install:*)",
-      "Bash(yarn add:*)"
+      "Bash(yarn add:*)",
+      "Bash(npm run build)"
     ],
     "deny": [],
     "ask": []
