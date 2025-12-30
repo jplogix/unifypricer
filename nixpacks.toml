@@ -3,7 +3,9 @@ cmds = [
   "yarn install",
   "yarn build",
   "cd dashboard && npm install",
-  "cd dashboard && npm run build"
+  "cd dashboard && npm run build",
+  "mkdir -p public",
+  "cp -r dashboard/dist/* public/"
 ]
 
 [start]
@@ -12,4 +14,4 @@ cmd = "yarn start"
 [variables]
 NODE_ENV = "production"
 PORT = "3000"
-NIXPACKS_NODE_VERSION = "20"
+NIXPACKS_NODE_VERSION = "22"
