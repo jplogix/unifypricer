@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ExternalLink, Loader2, Check, AlertCircle } from 'lucide-react';
+import { API_URL } from '../services/api';
 
 interface OAuthConnectProps {
   storeName: string;
@@ -30,7 +31,7 @@ const OAuthConnect: React.FC<OAuthConnectProps> = ({
 
     const checkOAuthResult = async () => {
       try {
-        const response = await fetch(`http://localhost:3000/api/oauth/shopify/poll?state=${oauthState}`);
+        const response = await fetch(`${API_URL}/oauth/shopify/poll?state=${oauthState}`);
         const data = await response.json();
 
         if (!data.ready) {
@@ -75,7 +76,7 @@ const OAuthConnect: React.FC<OAuthConnectProps> = ({
     setStatus('Initiating authentication...');
 
     try {
-      const API_URL = 'http://localhost:3000/api';
+      // Use imported API_URL
 
       if (platform === 'shopify') {
         // Extract shop domain from URL
@@ -271,9 +272,8 @@ const OAuthConnect: React.FC<OAuthConnectProps> = ({
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              platform === 'woocommerce' ? 'bg-purple-100 text-purple-600' : 'bg-green-100 text-green-600'
-            }`}>
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${platform === 'woocommerce' ? 'bg-purple-100 text-purple-600' : 'bg-green-100 text-green-600'
+              }`}>
               <ExternalLink className="w-6 h-6" />
             </div>
             <div>

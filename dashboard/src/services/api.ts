@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { StoreConfig, SyncStatus, ProductStatusRecord } from '../types';
 
-const API_URL = import.meta.env.MODE === 'development'
+export const API_URL = import.meta.env.MODE === 'development'
     ? 'http://localhost:3000/api'
     : '/api';
 
