@@ -10,6 +10,7 @@ export const config = {
     apiUrl: process.env.STREETPRICER_API_URL || 'https://api.streetpricer.com/api/v1',
     apiKey: process.env.STREETPRICER_API_KEY || '',
     apiSecret: process.env.STREETPRICER_API_SECRET || '',
+    productsEndpoint: process.env.STREETPRICER_PRODUCTS_ENDPOINT || '/products',
   },
 
   // Encryption

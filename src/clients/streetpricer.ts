@@ -28,6 +28,7 @@ export class StreetPricerClient implements IStreetPricerClient {
   private client: AxiosInstance;
   private authenticated: boolean = false;
   private authToken: string | null = null;
+  private productsEndpoint: string;
   private retryConfig: RetryConfig = {
     maxAttempts: 3,
     initialDelayMs: 1000,
@@ -38,8 +39,13 @@ export class StreetPricerClient implements IStreetPricerClient {
   constructor(
     private username: string = config.streetPricer.apiKey,
     private password: string = config.streetPricer.apiSecret,
-    private apiUrl: string = config.streetPricer.apiUrl
+    private apiUrl: string = config.streetPricer.apiUrl,
+    productsEndpoint: string = config.streetPricer.productsEndpoint || '/products'
   ) {
+    this.productsEndpoint = productsEndpoint.startsWith('/')
+      ? productsEndpoint
+      : `/${productsEndpoint}`;
+
     this.client = axios.create({
       baseURL: this.apiUrl,
       timeout: 30000,
@@ -96,7 +102,7 @@ export class StreetPricerClient implements IStreetPricerClient {
     return this.retryWithBackoff(async () => {
       try {
         const response = await this.client.get<{ products: StreetPricerApiProduct[] }>(
-          '/products'
+          this.productsEndpoint
         );
 
         const products = response.data.products;
@@ -113,8 +119,14 @@ export class StreetPricerClient implements IStreetPricerClient {
         return validatedProducts;
       } catch (error) {
         const errorMessage = this.getErrorMessage(error);
-        console.error('[StreetPricer] Failed to fetch products:', errorMessage);
-        throw error;
+        const endpointUrl = `${this.apiUrl.replace(/\/$/, '')}${this.productsEndpoint}`;
+        const isNotFound = axios.isAxiosError(error) && error.response?.status === 404;
+        const guidance = isNotFound
+          ? ` (endpoint not found at ${endpointUrl}. Verify STREETPRICER_API_URL and STREETPRICER_PRODUCTS_ENDPOINT from the StreetPricer docs).`
+          : '';
+
+        console.error('[StreetPricer] Failed to fetch products:', `${errorMessage}${guidance}`);
+        throw new Error(`Failed to fetch StreetPricer products: ${errorMessage}${guidance}`);
       }
     });
   }
@@ -130,7 +142,7 @@ export class StreetPricerClient implements IStreetPricerClient {
     return this.retryWithBackoff(async () => {
       try {
         const response = await this.client.get<{ products: StreetPricerApiProduct[] }>(
-          '/products',
+          this.productsEndpoint,
           {
             params: { category },
           }
