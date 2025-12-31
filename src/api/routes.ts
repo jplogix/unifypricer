@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { connectRouter } from "./connect-routes";
 import { configRepository, statusRepository, syncService } from "./container";
+import logsRouter from "./logs-routes.js";
 import { oauthRouter } from "./oauth-routes";
 import { StoreController } from "./store-controller";
 import { SyncController } from "./sync-controller";
@@ -20,6 +21,9 @@ router.use("/oauth", oauthRouter);
 
 // Connection routes (simplified plugin)
 router.use("/connect", connectRouter);
+
+// Logs routes
+router.use("/logs", logsRouter);
 
 // Store routes
 router.get("/stores", storeController.getAllStores);

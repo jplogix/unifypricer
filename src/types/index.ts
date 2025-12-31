@@ -39,6 +39,7 @@ export interface ShopifyProduct {
 
 export interface ShopifyVariant {
 	id: number;
+	productId: number; // Parent product ID
 	sku: string;
 	title: string;
 	price: string;

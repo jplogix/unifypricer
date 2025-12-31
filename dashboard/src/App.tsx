@@ -1,6 +1,7 @@
 import { LayoutDashboard, Plus, RefreshCw, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
 import QuickConnect from './components/QuickConnect';
+import { ServerLogs } from './components/ServerLogs';
 import StoreCard from './components/StoreCard';
 import StoreConfiguration from './components/StoreConfiguration';
 import { SyncStatusBar } from './components/SyncStatusBar';
@@ -130,6 +131,11 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Server Logs */}
+        <div className="mb-6">
+          <ServerLogs maxHeight="400px" />
+        </div>
+
         {/* Sync Status Bar */}
         {syncingStoreId && syncStatus.status && (
           <SyncStatusBar

@@ -175,11 +175,11 @@ export class SyncService implements ISyncService {
 								targetPrice,
 							);
 						} else {
-							// NOTE: Using 0 for productId as placeholder since we lack it in flattened variant.
-							// See previous discussion on type gap.
+							// For Shopify, use the productId from the variant
+							const shopifyVariant = pp as ShopifyVariant;
 							await (platformClient as IShopifyClient).updateProductPrice(
-								0,
-								pp.id,
+								shopifyVariant.productId,
+								shopifyVariant.id,
 								targetPrice,
 							);
 						}

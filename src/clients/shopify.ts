@@ -210,7 +210,7 @@ export class ShopifyClient implements IShopifyClient {
 		return {
 			id: product.id,
 			variants: product.variants.map((variant) =>
-				this.transformVariant(variant),
+				this.transformVariant(variant, product.id),
 			),
 		};
 	}
@@ -218,9 +218,13 @@ export class ShopifyClient implements IShopifyClient {
 	/**
 	 * Transform Shopify API variant to internal format
 	 */
-	private transformVariant(variant: ShopifyApiVariant): ShopifyVariant {
+	private transformVariant(
+		variant: ShopifyApiVariant,
+		productId: number,
+	): ShopifyVariant {
 		return {
 			id: variant.id,
+			productId: productId,
 			sku: variant.sku || "",
 			title: variant.title || "",
 			price: variant.price || "0",
