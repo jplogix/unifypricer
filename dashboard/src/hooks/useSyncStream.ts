@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface SyncLogEntry {
 	timestamp: Date;
@@ -12,15 +12,10 @@ export function useSyncStream(storeId: string, enabled: boolean) {
 	const [isComplete, setIsComplete] = useState(false);
 	const eventSourceRef = useRef<EventSource | null>(null);
 
-	useLayoutEffect(() => {
+	useEffect(() => {
 		if (!enabled || !storeId) {
 			return;
 		}
-
-		// Clear previous logs and state
-		setLogs([]);
-		setIsConnected(false);
-		setIsComplete(false);
 
 		const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
 		const eventSource = new EventSource(`${apiUrl}/api/sync/${storeId}/stream`);

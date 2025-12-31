@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp, Settings } from 'lucide-react';
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { useStoreStatus } from '../hooks/useStoreStatus';
 import { useSyncStream } from '../hooks/useSyncStream';
 import type { StoreConfig } from '../types';
@@ -52,6 +53,7 @@ const StoreCard: React.FC<StoreCardProps> = ({ store, onEdit }) => {
                         </div>
                     </div>
                     <button
+                        type="button"
                         onClick={onEdit}
                         className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
                     >
@@ -83,6 +85,7 @@ const StoreCard: React.FC<StoreCardProps> = ({ store, onEdit }) => {
                             onSyncComplete={handleSyncComplete}
                         />
                         <button
+                            type='button'
                             onClick={() => setIsExpanded(!isExpanded)}
                             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                         >
@@ -98,6 +101,7 @@ const StoreCard: React.FC<StoreCardProps> = ({ store, onEdit }) => {
                         <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-semibold text-gray-700">Sync Activity</h4>
                             <button
+                                type="button"
                                 onClick={() => setShowLogs(false)}
                                 className="text-xs text-gray-500 hover:text-gray-700"
                             >

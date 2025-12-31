@@ -1,5 +1,5 @@
 import axios, { type AxiosError, type AxiosInstance } from "axios";
-import { ShopifyProduct, ShopifyVariant } from "../types/index.js";
+import type { ShopifyProduct, ShopifyVariant } from "../types/index.js";
 
 export interface IShopifyClient {
 	authenticate(shopDomain: string, accessToken: string): Promise<void>;
@@ -167,9 +167,9 @@ export class ShopifyClient implements IShopifyClient {
 
 		if (
 			typeof price !== "number" ||
-			isNaN(price) ||
+			Number.isNaN(price) ||
 			price < 0 ||
-			!isFinite(price)
+			!Number.isFinite(price)
 		) {
 			throw new Error("Invalid price value");
 		}
