@@ -1,7 +1,7 @@
-import Database from 'better-sqlite3';
-import { getDatabaseConnection } from './database';
-import { encryptCredentials, decryptCredentials } from '../utils/encryption';
-import type { StoreConfig, Platform, EncryptedCredentials } from '../types';
+import type Database from "better-sqlite3";
+import type { Platform, StoreConfig } from "../types";
+import { decryptCredentials, encryptCredentials } from "../utils/encryption";
+import { getDatabaseConnection } from "./database";
 
 /**
  * Configuration Repository for managing store configurations
@@ -9,146 +9,154 @@ import type { StoreConfig, Platform, EncryptedCredentials } from '../types';
  */
 
 export class ConfigRepository {
-  constructor(private explicitDb?: Database.Database) { }
+	constructor(private explicitDb?: Database.Database) {}
 
-  private get db(): Database.Database {
-    if (this.explicitDb) {
-      return this.explicitDb;
-    }
-    const connection = getDatabaseConnection();
-    return connection.getDatabase();
-  }
+	private get db(): Database.Database {
+		if (this.explicitDb) {
+			return this.explicitDb;
+		}
+		const connection = getDatabaseConnection();
+		return connection.getDatabase();
+	}
 
-  /**
-   * Get store configuration by ID
-   * @param storeId - The unique store identifier
-   * @returns Store configuration with decrypted credentials, or null if not found
-   */
-  getStoreConfig(storeId: string): StoreConfig | null {
-    try {
-      const query = this.db.prepare(`
+	/**
+	 * Get store configuration by ID
+	 * @param storeId - The unique store identifier
+	 * @returns Store configuration with decrypted credentials, or null if not found
+	 */
+	getStoreConfig(storeId: string): StoreConfig | null {
+		try {
+			const query = this.db.prepare(`
         SELECT id, name, platform, credentials_encrypted, credentials_iv, 
                sync_interval, enabled
         FROM stores
         WHERE id = ?
       `);
 
-      const row = query.get(storeId) as {
-        id: string;
-        name: string;
-        platform: Platform;
-        credentials_encrypted: string;
-        credentials_iv: string;
-        sync_interval: number;
-        enabled: number;
-      } | null;
+			const row = query.get(storeId) as {
+				id: string;
+				name: string;
+				platform: Platform;
+				credentials_encrypted: string;
+				credentials_iv: string;
+				sync_interval: number;
+				enabled: number;
+			} | null;
 
-      if (!row) {
-        return null;
-      }
+			if (!row) {
+				return null;
+			}
 
-      return this.mapRowToStoreConfig(row);
-    } catch (error) {
-      throw new Error(`Failed to get store config: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
+			return this.mapRowToStoreConfig(row);
+		} catch (error) {
+			throw new Error(
+				`Failed to get store config: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+	}
 
-  /**
-   * Get all store configurations
-   * @returns Array of all store configurations with decrypted credentials
-   */
-  getAllStoreConfigs(): StoreConfig[] {
-    try {
-      const query = this.db.prepare(`
+	/**
+	 * Get all store configurations
+	 * @returns Array of all store configurations with decrypted credentials
+	 */
+	getAllStoreConfigs(): StoreConfig[] {
+		try {
+			const query = this.db.prepare(`
         SELECT id, name, platform, credentials_encrypted, credentials_iv, 
                sync_interval, enabled
         FROM stores
         ORDER BY name ASC
       `);
 
-      const rows = query.all() as Array<{
-        id: string;
-        name: string;
-        platform: Platform;
-        credentials_encrypted: string;
-        credentials_iv: string;
-        sync_interval: number;
-        enabled: number;
-      }>;
+			const rows = query.all() as Array<{
+				id: string;
+				name: string;
+				platform: Platform;
+				credentials_encrypted: string;
+				credentials_iv: string;
+				sync_interval: number;
+				enabled: number;
+			}>;
 
-      return rows.map(row => this.mapRowToStoreConfig(row));
-    } catch (error) {
-      throw new Error(`Failed to get all store configs: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
+			return rows.map((row) => this.mapRowToStoreConfig(row));
+		} catch (error) {
+			throw new Error(
+				`Failed to get all store configs: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+	}
 
-  /**
-   * Save or update store configuration
-   * @param config - Store configuration to save
-   */
-  saveStoreConfig(config: StoreConfig): void {
-    try {
-      // Check if store already exists
-      const existing = this.getStoreConfig(config.storeId);
+	/**
+	 * Save or update store configuration
+	 * @param config - Store configuration to save
+	 */
+	saveStoreConfig(config: StoreConfig): void {
+		try {
+			// Check if store already exists
+			const existing = this.getStoreConfig(config.storeId);
 
-      if (existing) {
-        // Update existing store
-        this.updateStoreConfig(config);
-      } else {
-        // Insert new store
-        this.insertStoreConfig(config);
-      }
-    } catch (error) {
-      throw new Error(`Failed to save store config: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
+			if (existing) {
+				// Update existing store
+				this.updateStoreConfig(config);
+			} else {
+				// Insert new store
+				this.insertStoreConfig(config);
+			}
+		} catch (error) {
+			throw new Error(
+				`Failed to save store config: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+	}
 
-  /**
-   * Delete store configuration
-   * @param storeId - The unique store identifier
-   */
-  deleteStoreConfig(storeId: string): void {
-    try {
-      const query = this.db.prepare(`
+	/**
+	 * Delete store configuration
+	 * @param storeId - The unique store identifier
+	 */
+	deleteStoreConfig(storeId: string): void {
+		try {
+			const query = this.db.prepare(`
         DELETE FROM stores
         WHERE id = ?
       `);
 
-      query.run(storeId);
-    } catch (error) {
-      throw new Error(`Failed to delete store config: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
+			query.run(storeId);
+		} catch (error) {
+			throw new Error(
+				`Failed to delete store config: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+	}
 
-  /**
-   * Insert new store configuration
-   * @private
-   */
-  private insertStoreConfig(config: StoreConfig): void {
-    const query = this.db.prepare(`
+	/**
+	 * Insert new store configuration
+	 * @private
+	 */
+	private insertStoreConfig(config: StoreConfig): void {
+		const query = this.db.prepare(`
       INSERT INTO stores (
         id, name, platform, credentials_encrypted, credentials_iv,
         sync_interval, enabled, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `);
 
-    query.run(
-      config.storeId,
-      config.storeName,
-      config.platform,
-      config.credentials.encrypted,
-      config.credentials.iv,
-      config.syncInterval,
-      config.enabled ? 1 : 0
-    );
-  }
+		query.run(
+			config.storeId,
+			config.storeName,
+			config.platform,
+			config.credentials.encrypted,
+			config.credentials.iv,
+			config.syncInterval,
+			config.enabled ? 1 : 0,
+		);
+	}
 
-  /**
-   * Update existing store configuration
-   * @private
-   */
-  private updateStoreConfig(config: StoreConfig): void {
-    const query = this.db.prepare(`
+	/**
+	 * Update existing store configuration
+	 * @private
+	 */
+	private updateStoreConfig(config: StoreConfig): void {
+		const query = this.db.prepare(`
       UPDATE stores
       SET name = ?,
           platform = ?,
@@ -160,42 +168,42 @@ export class ConfigRepository {
       WHERE id = ?
     `);
 
-    query.run(
-      config.storeName,
-      config.platform,
-      config.credentials.encrypted,
-      config.credentials.iv,
-      config.syncInterval,
-      config.enabled ? 1 : 0,
-      config.storeId
-    );
-  }
+		query.run(
+			config.storeName,
+			config.platform,
+			config.credentials.encrypted,
+			config.credentials.iv,
+			config.syncInterval,
+			config.enabled ? 1 : 0,
+			config.storeId,
+		);
+	}
 
-  /**
-   * Map database row to StoreConfig object
-   * @private
-   */
-  private mapRowToStoreConfig(row: {
-    id: string;
-    name: string;
-    platform: Platform;
-    credentials_encrypted: string;
-    credentials_iv: string;
-    sync_interval: number;
-    enabled: number;
-  }): StoreConfig {
-    return {
-      storeId: row.id,
-      storeName: row.name,
-      platform: row.platform,
-      credentials: {
-        encrypted: row.credentials_encrypted,
-        iv: row.credentials_iv,
-      },
-      syncInterval: row.sync_interval,
-      enabled: row.enabled === 1,
-    };
-  }
+	/**
+	 * Map database row to StoreConfig object
+	 * @private
+	 */
+	private mapRowToStoreConfig(row: {
+		id: string;
+		name: string;
+		platform: Platform;
+		credentials_encrypted: string;
+		credentials_iv: string;
+		sync_interval: number;
+		enabled: number;
+	}): StoreConfig {
+		return {
+			storeId: row.id,
+			storeName: row.name,
+			platform: row.platform,
+			credentials: {
+				encrypted: row.credentials_encrypted,
+				iv: row.credentials_iv,
+			},
+			syncInterval: row.sync_interval,
+			enabled: row.enabled === 1,
+		};
+	}
 }
 
 /**
@@ -210,24 +218,24 @@ export class ConfigRepository {
  * @returns StoreConfig with encrypted credentials
  */
 export function createStoreConfig(
-  storeId: string,
-  storeName: string,
-  platform: Platform,
-  credentials: Record<string, any>,
-  syncInterval: number = 60,
-  enabled: boolean = true,
-  encryptionKey?: string
+	storeId: string,
+	storeName: string,
+	platform: Platform,
+	credentials: Record<string, string>,
+	syncInterval: number = 60,
+	enabled: boolean = true,
+	encryptionKey?: string,
 ): StoreConfig {
-  const encryptedCreds = encryptCredentials(credentials, encryptionKey);
+	const encryptedCreds = encryptCredentials(credentials, encryptionKey);
 
-  return {
-    storeId,
-    storeName,
-    platform,
-    credentials: encryptedCreds,
-    syncInterval,
-    enabled,
-  };
+	return {
+		storeId,
+		storeName,
+		platform,
+		credentials: encryptedCreds,
+		syncInterval,
+		enabled,
+	};
 }
 
 /**
@@ -236,6 +244,13 @@ export function createStoreConfig(
  * @param encryptionKey - Optional encryption key (defaults to config.encryption.key)
  * @returns Decrypted credentials object
  */
-export function getDecryptedCredentials(config: StoreConfig, encryptionKey?: string): Record<string, any> {
-  return decryptCredentials(config.credentials.encrypted, config.credentials.iv, encryptionKey);
+export function getDecryptedCredentials(
+	config: StoreConfig,
+	encryptionKey?: string,
+): Record<string, string> {
+	return decryptCredentials(
+		config.credentials.encrypted,
+		config.credentials.iv,
+		encryptionKey,
+	);
 }

@@ -1,9 +1,9 @@
-import { IShopifyClient } from "../clients/shopify.js";
-import { IStreetPricerClient } from "../clients/streetpricer.js";
-import { IWooCommerceClient } from "../clients/woocommerce.js";
-import { AuditRepository } from "../repositories/audit.js";
-import { StatusRepository } from "../repositories/status.js";
-import {
+import type { IShopifyClient } from "../clients/shopify.js";
+import type { IStreetPricerClient } from "../clients/streetpricer.js";
+import type { IWooCommerceClient } from "../clients/woocommerce.js";
+import type { AuditRepository } from "../repositories/audit.js";
+import type { StatusRepository } from "../repositories/status.js";
+import type {
 	ShopifyVariant,
 	Store,
 	StoreSyncResult,
@@ -12,10 +12,13 @@ import {
 } from "../types/index.js";
 import { AppError, ErrorType } from "../utils/errors.js";
 import { Logger } from "../utils/logger.js";
-import { IProductMatcher } from "./product-matcher.js";
+import type { IProductMatcher } from "./product-matcher.js";
 
 export interface ISyncService {
-	syncStore(store: Store, credentials?: any): Promise<StoreSyncResult>;
+	syncStore(
+		store: Store,
+		credentials?: Record<string, unknown>,
+	): Promise<StoreSyncResult>;
 }
 
 export class SyncService implements ISyncService {
@@ -27,12 +30,15 @@ export class SyncService implements ISyncService {
 		private statusRepository: StatusRepository,
 		private auditRepository: AuditRepository,
 		private platformClients: {
-			woocommerce: (creds: any) => IWooCommerceClient;
-			shopify: (creds: any) => IShopifyClient;
+			woocommerce: (creds: Record<string, unknown>) => IWooCommerceClient;
+			shopify: (creds: Record<string, unknown>) => IShopifyClient;
 		},
 	) {}
 
-	async syncStore(store: Store, credentials?: any): Promise<StoreSyncResult> {
+	async syncStore(
+		store: Store,
+		credentials?: Record<string, unknown>,
+	): Promise<StoreSyncResult> {
 		this.logger.info(`Starting sync for store ${store.id}`, {
 			storeId: store.id,
 		});
@@ -57,17 +63,17 @@ export class SyncService implements ISyncService {
 			if (store.platform === "woocommerce") {
 				const client = this.platformClients.woocommerce(authCredentials);
 				await client.authenticate(
-					authCredentials.url,
-					authCredentials.consumerKey,
-					authCredentials.consumerSecret,
+					String(authCredentials.url),
+					String(authCredentials.consumerKey),
+					String(authCredentials.consumerSecret),
 				);
 				platformProducts = await client.getAllProducts();
 				platformClient = client;
 			} else if (store.platform === "shopify") {
 				const client = this.platformClients.shopify(authCredentials);
 				await client.authenticate(
-					authCredentials.shopDomain,
-					authCredentials.accessToken,
+					String(authCredentials.shopDomain),
+					String(authCredentials.accessToken),
 				);
 				const shopsProducts = await client.getAllProducts();
 				platformProducts = shopsProducts.flatMap((p) => p.variants);
@@ -146,7 +152,7 @@ export class SyncService implements ISyncService {
 							oldPrice: currentPrice,
 							newPrice: targetPrice,
 						});
-					} catch (err: any) {
+					} catch (err: unknown) {
 						pendingCount++;
 						// Update progress so UI shows pending increases
 						await this.statusRepository.updateSyncProgress(
@@ -155,7 +161,7 @@ export class SyncService implements ISyncService {
 							pendingCount,
 							unlistedCount,
 						);
-						const errMsg = err.message || "Update failed";
+						const errMsg = err instanceof Error ? err.message : String(err);
 						const errorType =
 							err instanceof AppError ? err.type : ErrorType.NETWORK;
 
@@ -205,10 +211,11 @@ export class SyncService implements ISyncService {
 					unlistedCount,
 				);
 			}
-		} catch (err: any) {
+		} catch (err: unknown) {
+			const errMsg = err instanceof Error ? err.message : String(err);
 			this.logger.error(`Sync failed for store ${store.id}`, {
 				storeId: store.id,
-				error: err.message,
+				error: errMsg,
 			});
 
 			// Update in-progress sync row with error so UI can show failure immediately
@@ -217,12 +224,12 @@ export class SyncService implements ISyncService {
 				repricedCount,
 				pendingCount,
 				unlistedCount,
-				err.message,
+				errMsg,
 			);
 
 			errors.push({
 				productId: "ALL",
-				errorMessage: err.message,
+				errorMessage: errMsg,
 				errorType: err instanceof AppError ? err.type : ErrorType.INTERNAL,
 			});
 		}
@@ -242,7 +249,7 @@ export class SyncService implements ISyncService {
 		return result;
 	}
 
-	private parseCredentials(store: Store): any {
+	private parseCredentials(store: Store): Record<string, unknown> {
 		// Fallback for mock/legacy
 		if (store.platform === "woocommerce") {
 			return {

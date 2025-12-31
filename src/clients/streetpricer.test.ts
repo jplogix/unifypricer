@@ -1,6 +1,6 @@
-import { beforeEachchdescribescribescrimock, test } from "bun:test";
 import axios from "axios";
 import * as fc from "fast-check";
+import { beforeEach, describe, mock, test } from "jest";
 import { StreetPricerClient } from "./streetpricer.js";
 
 // Mock axios
@@ -779,7 +779,7 @@ describe("StreetPricerClient", () => {
 								price: fc.double({ noNaN: true }),
 								currency: fc.string(),
 								last_updated: fc.date().map((d) => d.toISOString()),
-								isValid: fc.constant(true),
+								_isValid: fc.constant(true),
 							}),
 							// Invalid product (missing/invalid id)
 							fc.record({
@@ -793,7 +793,7 @@ describe("StreetPricerClient", () => {
 								price: fc.double({ noNaN: true }),
 								currency: fc.string(),
 								last_updated: fc.date().map((d) => d.toISOString()),
-								isValid: fc.constant(false),
+								_isValid: fc.constant(false),
 							}),
 							// Invalid product (missing/invalid price)
 							fc.record({
@@ -807,7 +807,7 @@ describe("StreetPricerClient", () => {
 								),
 								currency: fc.string(),
 								last_updated: fc.date().map((d) => d.toISOString()),
-								isValid: fc.constant(false),
+								_isValid: fc.constant(false),
 							}),
 						),
 						{ minLength: 0, maxLength: 20 },
@@ -815,10 +815,10 @@ describe("StreetPricerClient", () => {
 					async (mixedProducts) => {
 						// Transform the generated data into what the API would return
 						const apiProducts = mixedProducts.map(
-							({ isValid, ...rest }) => rest,
+							({ _isValid, ...rest }) => rest,
 						);
 						const expectedValidCount = mixedProducts.filter(
-							(p) => p.isValid,
+							(p) => p._isValid,
 						).length;
 
 						mockAxiosInstance.get.mockResolvedValueOnce({

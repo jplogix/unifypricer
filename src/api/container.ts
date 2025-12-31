@@ -1,11 +1,11 @@
-import { ConfigRepository } from '../repositories/config';
-import { StatusRepository } from '../repositories/status';
-import { AuditRepository } from '../repositories/audit';
-import { SyncService } from '../services/sync-service';
-import { StreetPricerClient } from '../clients/streetpricer';
-import { ProductMatcher } from '../services/product-matcher';
-import { WooCommerceClient } from '../clients/woocommerce';
-import { ShopifyClient } from '../clients/shopify';
+import { ShopifyClient } from "../clients/shopify";
+import { StreetPricerClient } from "../clients/streetpricer";
+import { WooCommerceClient } from "../clients/woocommerce";
+import { AuditRepository } from "../repositories/audit";
+import { ConfigRepository } from "../repositories/config";
+import { StatusRepository } from "../repositories/status";
+import { ProductMatcher } from "../services/product-matcher";
+import { SyncService } from "../services/sync-service";
 
 // Singleton instances
 export const configRepository = new ConfigRepository();
@@ -17,14 +17,14 @@ const streetPricerClient = new StreetPricerClient();
 const productMatcher = new ProductMatcher();
 
 const platformClients = {
-    woocommerce: (_creds: any) => new WooCommerceClient(),
-    shopify: (_creds: any) => new ShopifyClient()
+	woocommerce: () => new WooCommerceClient(),
+	shopify: () => new ShopifyClient(),
 };
 
 export const syncService = new SyncService(
-    streetPricerClient,
-    productMatcher,
-    statusRepository,
-    auditRepository,
-    platformClients
+	streetPricerClient,
+	productMatcher,
+	statusRepository,
+	auditRepository,
+	platformClients,
 );

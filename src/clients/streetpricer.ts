@@ -1,20 +1,11 @@
-import axios, { AxiosError, AxiosInstance } from "axios";
+import axios, { type AxiosError, type AxiosInstance } from "axios";
 import { config } from "../config/index.js";
-import { StreetPricerProduct } from "../types/index.js";
+import type { StreetPricerProduct } from "../types/index.js";
 
 export interface IStreetPricerClient {
 	authenticate(): Promise<void>;
 	fetchAllProducts(): Promise<StreetPricerProduct[]>;
 	fetchProductsByCategory(category: string): Promise<StreetPricerProduct[]>;
-}
-
-interface StreetPricerApiProduct {
-	id: string;
-	sku: string;
-	name: string;
-	price: number;
-	currency: string;
-	last_updated: string;
 }
 
 interface StreetPricerStore {
@@ -202,8 +193,8 @@ export class StreetPricerClient implements IStreetPricerClient {
 				console.log(
 					`[StreetPricer] Fetched ${storeProducts.length} products from store ${storeId}`,
 				);
-			} catch (err: any) {
-				const msg = this.getErrorMessage(err);
+			} catch (error: unknown) {
+				const msg = this.getErrorMessage(error);
 				console.error(
 					`[StreetPricer] Failed to fetch products for store ${storeId}: ${msg}`,
 				);
@@ -232,7 +223,12 @@ export class StreetPricerClient implements IStreetPricerClient {
 	private async fetchStores(): Promise<StreetPricerStore[]> {
 		try {
 			const response = await this.client.get(this.storesEndpoint);
-			const data: any = response.data;
+			const data = response.data as
+				| {
+						stores?: StreetPricerStore[];
+						items?: StreetPricerStore[];
+				  }
+				| StreetPricerStore[];
 
 			// Accept multiple shapes returned by the API:
 			// - An array directly: [ { ... }, ... ]
@@ -275,33 +271,40 @@ export class StreetPricerClient implements IStreetPricerClient {
 			// The StreetPricer API may paginate items. Loop pages if needed.
 			let page = 1;
 			while (true) {
-				const response = await this.client.get<any>(endpoint, {
+				const response = await this.client.get<unknown>(endpoint, {
 					params: { ...(params || {}), page },
 				});
-				const data = response.data;
-
-				// Determine where the products/items live in the response
-				let items: StreetPricerApiProduct[] = [];
-
-				if (Array.isArray(data?.products)) {
-					items = data.products;
-				} else if (Array.isArray(data?.items)) {
-					items = data.items;
-				} else if (Array.isArray(data)) {
-					items = data;
-				}
+				const data = response.data as
+					| {
+							items?: unknown[];
+							total_page?: number;
+							page?: number;
+					  }
+					| unknown[];
+				const items = Array.isArray(data) ? data : data?.items || [];
 
 				const validatedProducts = (items || [])
-					.map((product) => this.validateAndTransformProduct(product))
+					.map((product) =>
+						this.validateAndTransformProduct(
+							product as Record<string, unknown>,
+						),
+					)
 					.filter(
 						(product): product is StreetPricerProduct => product !== null,
 					);
 
 				aggregatedProducts.push(...validatedProducts);
 
-				const totalPage =
-					typeof data?.total_page === "number" ? data.total_page : null;
-				const currentPage = typeof data?.page === "number" ? data.page : page;
+				const totalPage = Array.isArray(data)
+					? null
+					: typeof data?.total_page === "number"
+						? data.total_page
+						: null;
+				const currentPage = Array.isArray(data)
+					? page
+					: typeof data?.page === "number"
+						? data.page
+						: page;
 
 				console.log(
 					`[StreetPricer] Fetched ${validatedProducts.length} valid products (${items.length} total) from ${endpoint} page=${currentPage}`,
@@ -346,7 +349,7 @@ export class StreetPricerClient implements IStreetPricerClient {
 	 * Validates: Requirement 1.4
 	 */
 	private validateAndTransformProduct(
-		product: any,
+		product: Record<string, unknown>,
 	): StreetPricerProduct | null {
 		// Flexible extraction for various API shapes (ID, id, ItemID, SKU, Price, NewPrice, Modified)
 		const idRaw =
@@ -373,7 +376,7 @@ export class StreetPricerClient implements IStreetPricerClient {
 				: typeof priceRaw === "string"
 					? parseFloat(priceRaw)
 					: NaN;
-		if (typeof price !== "number" || isNaN(price)) {
+		if (typeof price !== "number" || Number.isNaN(price)) {
 			console.warn("[StreetPricer] Product missing or invalid price:", product);
 			return null;
 		}
@@ -383,14 +386,16 @@ export class StreetPricerClient implements IStreetPricerClient {
 		const currency = product?.currency ?? product?.PriceCurr ?? "USD";
 		const lastUpdatedRaw =
 			product?.last_updated ?? product?.Modified ?? product?.GTINUpdated;
-		const lastUpdated = lastUpdatedRaw ? new Date(lastUpdatedRaw) : new Date();
+		const lastUpdated = lastUpdatedRaw
+			? new Date(String(lastUpdatedRaw))
+			: new Date();
 
 		return {
 			id,
-			sku: sku || "",
-			name: name || "",
+			sku: String(sku || ""),
+			name: String(name || ""),
 			price,
-			currency,
+			currency: String(currency || "USD"),
 			lastUpdated,
 		};
 	}

@@ -1,9 +1,9 @@
-import Database from "better-sqlite3";
-import {
-	ProductStatus,
+import type Database from "better-sqlite3";
+import type {
 	ProductStatusRecord,
 	ProductSyncStatus,
 	StoreSyncResult,
+	SyncError,
 	SyncHistoryRecord,
 	SyncStatus,
 } from "../types/index.js";
@@ -36,9 +36,7 @@ export class StatusRepository {
 					result.errors.length === result.repricedCount + result.pendingCount
 						? "failed"
 						: "partial";
-				errorMessage = result.errors
-					.map((e) => `${e.productId}: ${e.errorMessage}`)
-					.join("; ");
+				errorMessage = JSON.stringify(result.errors);
 			}
 
 			// Try to update an existing in-progress row first
@@ -48,7 +46,7 @@ export class StatusRepository {
         WHERE store_id = ? AND status = 'in_progress'
       `);
 
-			const resultInfo = updateStmt.run(
+			const resultInfo: Database.RunResult = updateStmt.run(
 				result.repricedCount,
 				result.pendingCount,
 				result.unlistedCount,
@@ -58,7 +56,7 @@ export class StatusRepository {
 				result.storeId,
 			);
 
-			if ((resultInfo as any).changes === 0) {
+			if ((resultInfo as { changes: number }).changes === 0) {
 				// No in-progress row to update, insert a new completed row
 				const insertStmt = db.prepare(`
           INSERT INTO sync_history (
@@ -109,28 +107,58 @@ export class StatusRepository {
         LIMIT 1
       `);
 
-			const row = stmt.get(storeId) as any;
+			const row = stmt.get(storeId) as {
+				store_id: string;
+				store_name: string;
+				platform: string;
+				repriced_count: number;
+				pending_count: number;
+				unlisted_count: number;
+				status: string;
+				error_message: string | null;
+				started_at: string;
+				completed_at: string | null;
+			} | null;
 
 			if (!row) {
 				return null;
 			}
 
-			// Parse errors from error_message
-			const errors = row.error_message
-				? row.error_message.split("; ").map((errorStr: string) => {
+			let errors: SyncError[] = [];
+
+			if (row.error_message) {
+				try {
+					const parsed = JSON.parse(row.error_message);
+					if (Array.isArray(parsed)) {
+						errors = parsed
+							.filter(
+								(error: unknown): error is SyncError =>
+									typeof (error as SyncError)?.productId === "string" &&
+									typeof (error as SyncError)?.errorMessage === "string" &&
+									typeof (error as SyncError)?.errorType === "string",
+							)
+							.map((error) => ({
+								productId: error.productId,
+								errorMessage: error.errorMessage,
+								errorType: error.errorType,
+							}));
+					}
+				} catch {
+					errors = row.error_message.split("; ").map((errorStr: string) => {
 						const [productId, ...messageParts] = errorStr.split(": ");
 						return {
 							productId,
 							errorMessage: messageParts.join(": "),
-							errorType: "network" as const, // Default error type
+							errorType: "unknown_error" as SyncError["errorType"],
 						};
-					})
-				: [];
+					});
+				}
+			}
 
 			return {
 				storeId: row.store_id,
 				storeName: row.store_name,
-				platform: row.platform,
+				platform: row.platform as "shopify" | "woocommerce",
 				repricedCount: row.repriced_count,
 				pendingCount: row.pending_count,
 				unlistedCount: row.unlisted_count,
@@ -229,7 +257,19 @@ export class StatusRepository {
         LIMIT ?
       `);
 
-			const rows = stmt.all(storeId, limit) as any[];
+			type SyncHistoryRow = {
+				id: number;
+				store_id: string;
+				repriced_count: number;
+				pending_count: number;
+				unlisted_count: number;
+				status: SyncStatus;
+				error_message: string | null;
+				started_at: string;
+				completed_at: string | null;
+			};
+
+			const rows = stmt.all(storeId, limit) as SyncHistoryRow[];
 
 			return rows.map((row) => ({
 				id: row.id,
@@ -238,9 +278,11 @@ export class StatusRepository {
 				pendingCount: row.pending_count,
 				unlistedCount: row.unlisted_count,
 				status: row.status,
-				errorMessage: row.error_message || undefined,
+				errorMessage: row.error_message ?? undefined,
 				startedAt: new Date(row.started_at),
-				completedAt: new Date(row.completed_at),
+				completedAt: row.completed_at
+					? new Date(row.completed_at)
+					: new Date(row.started_at),
 			}));
 		} catch (error) {
 			throw new Error(
@@ -310,7 +352,7 @@ export class StatusRepository {
         WHERE store_id = ?
       `;
 
-			const params: any[] = [storeId];
+			const params: unknown[] = [storeId];
 
 			if (status) {
 				query += " AND status = ?";
@@ -320,7 +362,21 @@ export class StatusRepository {
 			query += " ORDER BY last_attempt DESC";
 
 			const stmt = this.getDb().prepare(query);
-			const rows = stmt.all(...params) as any[];
+			type ProductStatusRow = {
+				id: number;
+				store_id: string;
+				platform_product_id: string;
+				streetpricer_product_id: string;
+				sku: string;
+				status: ProductSyncStatus;
+				last_attempt: string;
+				last_success: string | null;
+				error_message: string | null;
+				current_price: number;
+				target_price: number;
+			};
+
+			const rows = stmt.all(...params) as ProductStatusRow[];
 
 			return rows.map((row) => ({
 				id: row.id,
@@ -331,7 +387,7 @@ export class StatusRepository {
 				status: row.status,
 				lastAttempt: new Date(row.last_attempt),
 				lastSuccess: row.last_success ? new Date(row.last_success) : undefined,
-				errorMessage: row.error_message || undefined,
+				errorMessage: row.error_message ?? undefined,
 				currentPrice: row.current_price,
 				targetPrice: row.target_price,
 			}));
