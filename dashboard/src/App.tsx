@@ -1,18 +1,27 @@
-import { useState } from 'react';
 import { LayoutDashboard, Plus, RefreshCw, ShoppingBag } from 'lucide-react';
+import { useState } from 'react';
+import QuickConnect from './components/QuickConnect';
 import StoreCard from './components/StoreCard';
 import StoreConfiguration from './components/StoreConfiguration';
-import QuickConnect from './components/QuickConnect';
+import { SyncStatusBar } from './components/SyncStatusBar';
+import { ToastContainer } from './components/ToastContainer';
+import { useStoreStatus } from './hooks/useStoreStatus';
+import { useStores } from './hooks/useStores';
+import { useToast } from './hooks/useToast';
 import { storeService } from './services/api';
 import type { StoreConfig } from './types';
-import { useStores } from './hooks/useStores';
 
 type ConfigStep = 'quickconnect' | 'form' | null;
 
 function App() {
   const { stores, loading, error, refreshStores } = useStores();
+  const { toasts, removeToast, success, error: showError, info } = useToast();
   const [configStep, setConfigStep] = useState<ConfigStep>(null);
   const [selectedStore, setSelectedStore] = useState<StoreConfig | undefined>(undefined);
+  const [syncingStoreId, setSyncingStoreId] = useState<string | null>(null);
+
+  // Monitor status of currently syncing store
+  const syncStatus = useStoreStatus(syncingStoreId || '');
 
   const handleAddStore = () => {
     setSelectedStore(undefined);
@@ -26,18 +35,36 @@ function App() {
     url: string;
     credentials: any;
   }) => {
-    const payload: any = {
-      storeId: storeData.storeId,
-      storeName: storeData.storeName,
-      platform: storeData.platform,
-      syncInterval: 60,
-      enabled: true,
-      credentials: storeData.credentials
-    };
+    try {
+      info(`Creating store ${storeData.storeName}...`);
 
-    await storeService.create(payload);
-    await refreshStores();
-    setConfigStep(null);
+      const payload: any = {
+        storeId: storeData.storeId,
+        storeName: storeData.storeName,
+        platform: storeData.platform,
+        syncInterval: 60,
+        enabled: true,
+        credentials: storeData.credentials
+      };
+
+      await storeService.create(payload);
+      success(`Store ${storeData.storeName} created successfully!`);
+
+      await refreshStores();
+      setConfigStep(null);
+
+      // Start monitoring sync
+      setSyncingStoreId(storeData.storeId);
+      info(`Starting price sync for ${storeData.storeName}...`);
+
+      try {
+        await storeService.triggerSync(storeData.storeId);
+      } catch (err) {
+        showError(`Failed to start sync for ${storeData.storeName}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
+    } catch (err) {
+      showError(`Failed to create store: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
   };
 
   const handleEditStore = (store: StoreConfig) => {
@@ -57,6 +84,9 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -87,6 +117,18 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Sync Status Bar */}
+        {syncingStoreId && syncStatus.status && (
+          <SyncStatusBar
+            storeName={stores.find(s => s.storeId === syncingStoreId)?.storeName || syncingStoreId}
+            status={(syncStatus.status.syncStatus === 'pending' ? 'in_progress' : syncStatus.status.syncStatus) as 'in_progress' | 'success' | 'partial' | 'failed'}
+            repricedCount={syncStatus.status.repricedCount}
+            pendingCount={syncStatus.status.pendingCount}
+            unlistedCount={syncStatus.status.unlistedCount}
+            error={syncStatus.error || undefined}
+          />
+        )}
+
         {loading && stores.length === 0 ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

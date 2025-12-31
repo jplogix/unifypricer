@@ -1,20 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { type StoreStatus, storeService } from "../services/api";
 
-const DEFAULT_STATUS: StoreStatus = {
-	repricedCount: 0,
-	pendingCount: 0,
-	unlistedCount: 0,
-	syncStatus: "pending",
-};
-
 export function useStoreStatus(storeId: string) {
-	const [status, setStatus] = useState<StoreStatus>(DEFAULT_STATUS);
+	const [status, setStatus] = useState<StoreStatus | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const fetchStatus = useCallback(
 		async (isBackground = false) => {
+			if (!storeId) return;
+
 			try {
 				if (!isBackground) setLoading(true);
 				const data = await storeService.getStatus(storeId);
@@ -31,10 +26,12 @@ export function useStoreStatus(storeId: string) {
 	);
 
 	useEffect(() => {
+		if (!storeId) return;
+
 		fetchStatus();
 		const interval = setInterval(() => fetchStatus(true), 10000); // Poll every 10s for status
 		return () => clearInterval(interval);
-	}, [fetchStatus]);
+	}, [fetchStatus, storeId]);
 
 	const triggerSync = async () => {
 		try {

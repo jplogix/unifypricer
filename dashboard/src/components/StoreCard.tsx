@@ -1,10 +1,10 @@
+import { ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import React, { useState } from 'react';
-import { Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { useStoreStatus } from '../hooks/useStoreStatus';
 import type { StoreConfig } from '../types';
+import ProductList from './ProductList';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import SyncTrigger from './SyncTrigger';
-import ProductList from './ProductList';
-import { useStoreStatus } from '../hooks/useStoreStatus';
 
 interface StoreCardProps {
     store: StoreConfig;
@@ -48,18 +48,18 @@ const StoreCard: React.FC<StoreCardProps> = ({ store, onEdit }) => {
                 <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="bg-gray-50 rounded-lg p-3">
                         <div className="text-sm text-gray-500 mb-1">Repriced</div>
-                        <div className="text-2xl font-bold text-gray-900">{status.repricedCount}</div>
+                        <div className="text-2xl font-bold text-gray-900">{status?.repricedCount || 0}</div>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-3">
                         <div className="text-sm text-gray-500 mb-1">Pending</div>
-                        <div className="text-2xl font-bold text-gray-900">{status.pendingCount}</div>
+                        <div className="text-2xl font-bold text-gray-900">{status?.pendingCount || 0}</div>
                     </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                     <SyncStatusIndicator
-                        timestamp={status.lastSync || ''}
-                        status={status.syncStatus}
+                        timestamp={status?.lastSync || ''}
+                        status={status?.syncStatus || 'pending'}
                     />
 
                     <div className="flex gap-2">

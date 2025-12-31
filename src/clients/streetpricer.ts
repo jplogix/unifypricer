@@ -30,10 +30,10 @@ export class StreetPricerClient implements IStreetPricerClient {
 	private storesEndpoint: string;
 	private productsEndpoint: string;
 	private retryConfig: RetryConfig = {
-		maxAttempts: 3,
-		initialDelayMs: 1000,
-		maxDelayMs: 10000,
-		backoffMultiplier: 2,
+		maxAttempts: 5,
+		initialDelayMs: 2000,
+		maxDelayMs: 30000,
+		backoffMultiplier: 3,
 	};
 
 	constructor(
@@ -193,6 +193,11 @@ export class StreetPricerClient implements IStreetPricerClient {
 				console.log(
 					`[StreetPricer] Fetched ${storeProducts.length} products from store ${storeId}`,
 				);
+
+				// Add delay between stores to avoid rate limiting
+				if (stores.indexOf(store) < stores.length - 1) {
+					await this.sleep(1000);
+				}
 			} catch (error: unknown) {
 				const msg = this.getErrorMessage(error);
 				console.error(
@@ -440,6 +445,9 @@ export class StreetPricerClient implements IStreetPricerClient {
 					if (!Number.isNaN(seconds)) {
 						delay = Math.max(delay, seconds * 1000);
 					}
+				} else {
+					// If no Retry-After header, add extra delay for 429 errors
+					delay = Math.max(delay, 5000);
 				}
 			}
 
