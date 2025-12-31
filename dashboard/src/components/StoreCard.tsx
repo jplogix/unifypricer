@@ -1,8 +1,10 @@
 import { ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import React, { useState } from 'react';
 import { useStoreStatus } from '../hooks/useStoreStatus';
+import { useSyncStream } from '../hooks/useSyncStream';
 import type { StoreConfig } from '../types';
 import ProductList from './ProductList';
+import { SyncLogs } from './SyncLogs';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import SyncTrigger from './SyncTrigger';
 
@@ -13,10 +15,22 @@ interface StoreCardProps {
 
 const StoreCard: React.FC<StoreCardProps> = ({ store, onEdit }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [showLogs, setShowLogs] = useState(false);
+    const [syncEnabled, setSyncEnabled] = useState(false);
     const { status, refreshStatus } = useStoreStatus(store.storeId);
+    const { logs, isConnected, isComplete } = useSyncStream(store.storeId, syncEnabled);
+
+    const handleSyncStart = () => {
+        setShowLogs(true);
+        setSyncEnabled(true);
+    };
 
     const handleSyncComplete = () => {
         refreshStatus();
+        // Disable the stream after a delay
+        setTimeout(() => {
+            setSyncEnabled(false);
+        }, 3000);
     };
 
     return (
@@ -65,6 +79,7 @@ const StoreCard: React.FC<StoreCardProps> = ({ store, onEdit }) => {
                     <div className="flex gap-2">
                         <SyncTrigger
                             storeId={store.storeId}
+                            onSyncStarted={handleSyncStart}
                             onSyncComplete={handleSyncComplete}
                         />
                         <button
@@ -76,6 +91,23 @@ const StoreCard: React.FC<StoreCardProps> = ({ store, onEdit }) => {
                     </div>
                 </div>
             </div>
+
+            {showLogs && (
+                <div className="border-t border-gray-100 bg-gray-50">
+                    <div className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold text-gray-700">Sync Activity</h4>
+                            <button
+                                onClick={() => setShowLogs(false)}
+                                className="text-xs text-gray-500 hover:text-gray-700"
+                            >
+                                Hide
+                            </button>
+                        </div>
+                        <SyncLogs logs={logs} isConnected={isConnected} isComplete={isComplete} />
+                    </div>
+                </div>
+            )}
 
             {isExpanded && (
                 <div className="border-t border-gray-100 bg-gray-50 p-6">

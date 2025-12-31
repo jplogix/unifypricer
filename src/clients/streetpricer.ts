@@ -318,6 +318,8 @@ export class StreetPricerClient implements IStreetPricerClient {
 				// If paginated and more pages exist, fetch next page
 				if (totalPage && currentPage < totalPage) {
 					page = currentPage + 1;
+					// Add delay between pages to avoid rate limiting
+					await this.sleep(500);
 					continue;
 				}
 

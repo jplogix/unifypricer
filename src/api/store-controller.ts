@@ -15,11 +15,7 @@ export class StoreController {
 		try {
 			const configs = this.configRepository.getAllStoreConfigs();
 			// Don't expose sensitive credentials in API response
-			const stores = configs.map((config) => {
-				// eslint-disable-next-line @typescript-eslint/no-unused-vars
-				const { credentials, ...rest } = config;
-				return rest;
-			});
+			const stores = configs.map(({ credentials, ...rest }) => rest);
 			res.json(stores);
 		} catch {
 			res.status(500).json({ error: "Failed to fetch stores" });

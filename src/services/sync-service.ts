@@ -1,3 +1,4 @@
+import { syncEventEmitter } from "../api/sync-stream-controller.js";
 import type { IShopifyClient } from "../clients/shopify.js";
 import type { IStreetPricerClient } from "../clients/streetpricer.js";
 import type { IWooCommerceClient } from "../clients/woocommerce.js";
@@ -35,6 +36,15 @@ export class SyncService implements ISyncService {
 		},
 	) {}
 
+	private emitEvent(
+		storeId: string,
+		type: string,
+		message: string,
+		data?: unknown,
+	) {
+		syncEventEmitter.emit("sync-event", { storeId, type, message, data });
+	}
+
 	async syncStore(
 		store: Store,
 		credentials?: Record<string, unknown>,
@@ -42,6 +52,8 @@ export class SyncService implements ISyncService {
 		this.logger.info(`Starting sync for store ${store.id}`, {
 			storeId: store.id,
 		});
+		this.emitEvent(store.id, "info", `Starting sync for store ${store.name}`);
+
 		const errors: SyncError[] = [];
 		let repricedCount = 0;
 		let pendingCount = 0;
@@ -50,11 +62,27 @@ export class SyncService implements ISyncService {
 		try {
 			// Mark sync as started (so UI can poll for in-progress updates)
 			await this.statusRepository.startSync(store.id);
+			this.emitEvent(store.id, "info", "Marked sync as in progress");
 
 			// 1. Fetch StreetPricer Data
+			this.emitEvent(
+				store.id,
+				"info",
+				"Fetching products from StreetPricer...",
+			);
 			const spProducts = await this.streetPricerClient.fetchAllProducts();
+			this.emitEvent(
+				store.id,
+				"success",
+				`Fetched ${spProducts.length} products from StreetPricer`,
+			);
 
 			// 2. Fetch Platform Data
+			this.emitEvent(
+				store.id,
+				"info",
+				`Connecting to ${store.platform} store...`,
+			);
 			let platformProducts: (WooCommerceProduct | ShopifyVariant)[] = [];
 			let platformClient: IWooCommerceClient | IShopifyClient;
 
@@ -62,21 +90,49 @@ export class SyncService implements ISyncService {
 
 			if (store.platform === "woocommerce") {
 				const client = this.platformClients.woocommerce(authCredentials);
+				this.emitEvent(store.id, "info", "Authenticating with WooCommerce...");
 				await client.authenticate(
 					String(authCredentials.url),
 					String(authCredentials.consumerKey),
 					String(authCredentials.consumerSecret),
 				);
+				this.emitEvent(
+					store.id,
+					"success",
+					"WooCommerce authentication successful",
+				);
+				this.emitEvent(
+					store.id,
+					"info",
+					"Fetching products from WooCommerce...",
+				);
 				platformProducts = await client.getAllProducts();
+				this.emitEvent(
+					store.id,
+					"success",
+					`Fetched ${platformProducts.length} products from WooCommerce`,
+				);
 				platformClient = client;
 			} else if (store.platform === "shopify") {
 				const client = this.platformClients.shopify(authCredentials);
+				this.emitEvent(store.id, "info", "Authenticating with Shopify...");
 				await client.authenticate(
 					String(authCredentials.shopDomain),
 					String(authCredentials.accessToken),
 				);
+				this.emitEvent(
+					store.id,
+					"success",
+					"Shopify authentication successful",
+				);
+				this.emitEvent(store.id, "info", "Fetching products from Shopify...");
 				const shopsProducts = await client.getAllProducts();
 				platformProducts = shopsProducts.flatMap((p) => p.variants);
+				this.emitEvent(
+					store.id,
+					"success",
+					`Fetched ${platformProducts.length} variants from Shopify`,
+				);
 				platformClient = client;
 			} else {
 				throw new AppError(
@@ -86,12 +142,23 @@ export class SyncService implements ISyncService {
 			}
 
 			// 3. Match Products
+			this.emitEvent(
+				store.id,
+				"info",
+				"Matching products between StreetPricer and platform...",
+			);
 			const matchResult = this.productMatcher.matchProducts(
 				spProducts,
 				platformProducts,
 			);
+			this.emitEvent(
+				store.id,
+				"success",
+				`Matched ${matchResult.matched.length} products, ${matchResult.unlisted.length} unlisted`,
+			);
 
 			// 4. Process Matches
+			this.emitEvent(store.id, "info", "Processing price updates...");
 			for (const match of matchResult.matched) {
 				const sp = match.streetPricerProduct;
 				const pp = match.platformProduct;
@@ -118,6 +185,11 @@ export class SyncService implements ISyncService {
 						}
 
 						repricedCount++;
+						this.emitEvent(
+							store.id,
+							"success",
+							`Updated price for ${pp.sku || pp.id}: $${currentPrice.toFixed(2)} → $${targetPrice.toFixed(2)}`,
+						);
 						await this.statusRepository.updateSyncProgress(
 							store.id,
 							repricedCount,
