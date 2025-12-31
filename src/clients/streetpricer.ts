@@ -204,8 +204,6 @@ export class StreetPricerClient implements IStreetPricerClient {
 					`[StreetPricer] Failed to fetch products for store ${storeId}: ${msg}`,
 				);
 				storeErrors.push(`${storeId}: ${msg}`);
-				// continue with other stores
-				continue;
 			}
 		}
 

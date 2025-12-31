@@ -165,9 +165,9 @@ export class WooCommerceClient implements IWooCommerceClient {
 
 		if (
 			typeof price !== "number" ||
-			isNaN(price) ||
+			Number.isNaN(price) ||
 			price < 0 ||
-			!isFinite(price)
+			!Number.isFinite(price)
 		) {
 			throw new Error("Invalid price value");
 		}

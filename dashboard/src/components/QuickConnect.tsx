@@ -1,5 +1,6 @@
+import { Check, ExternalLink, Eye, EyeOff, Info, Loader2, Plug, X } from 'lucide-react';
 import React, { useState } from 'react';
-import { Plug, Loader2, Check, Eye, EyeOff, Info, ExternalLink, X } from 'lucide-react';
+import { InputWithHistory } from './InputWithHistory';
 import OAuthConnect from './OAuthConnect';
 
 interface QuickConnectProps {
@@ -244,23 +245,16 @@ const QuickConnect: React.FC<QuickConnectProps> = ({ onConnect, onCancel }) => {
           <form onSubmit={handleCredentialsSubmit} className="p-6 space-y-4">
             {platform === 'woocommerce' ? (
               <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Consumer Key
-                  </label>
-                  <input
-                    type="text"
-                    value={credentials.consumerKey}
-                    onChange={(e) => setCredentials({ ...credentials, consumerKey: e.target.value })}
-                    placeholder="ck_xxxxxxxx"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-400"
-                    disabled={isLoading}
-                    required
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    WooCommerce → Settings → Advanced → REST API
-                  </p>
-                </div>
+                <InputWithHistory
+                  label="Consumer Key"
+                  value={credentials.consumerKey}
+                  onChange={(value) => setCredentials({ ...credentials, consumerKey: value })}
+                  placeholder="ck_xxxxxxxx"
+                  storageKey="woocommerce-consumer-key"
+                  helpText="WooCommerce → Settings → Advanced → REST API"
+                  disabled={isLoading}
+                  required
+                />
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -364,45 +358,37 @@ const QuickConnect: React.FC<QuickConnectProps> = ({ onConnect, onCancel }) => {
         </div>
 
         <form onSubmit={handleUrlSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Store Name
-            </label>
-            <input
-              type="text"
-              value={storeName}
-              onChange={(e) => setStoreName(e.target.value)}
-              placeholder="My Store"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-400"
-              disabled={isLoading}
-              required
-            />
-          </div>
+          <InputWithHistory
+            label="Store Name"
+            value={storeName}
+            onChange={setStoreName}
+            placeholder="My Store"
+            storageKey="quickconnect-store-name"
+            disabled={isLoading}
+            required
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Store URL
-            </label>
-            <input
-              type="url"
-              value={storeUrl}
-              onChange={(e) => {
-                setStoreUrl(e.target.value);
-                const platform = detectPlatform(e.target.value);
-                setDetectedPlatform(platform);
-              }}
-              placeholder="https://mystore.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-400"
-              disabled={isLoading}
-              required
-            />
-            {detectedPlatform && (
-              <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${platformColor}`}>
-                <Check className="w-3 h-3" />
-                {platformIcon} detected
-              </div>
-            )}
-          </div>
+          <InputWithHistory
+            label="Store URL"
+            type="url"
+            value={storeUrl}
+            onChange={(value) => {
+              setStoreUrl(value);
+              const platform = detectPlatform(value);
+              setDetectedPlatform(platform);
+            }}
+            placeholder="https://mystore.com"
+            storageKey="quickconnect-store-url"
+            disabled={isLoading}
+            required
+          />
+
+          {detectedPlatform && (
+            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${platformColor}`}>
+              <Check className="w-3 h-3" />
+              {platformIcon} detected
+            </div>
+          )}
 
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
