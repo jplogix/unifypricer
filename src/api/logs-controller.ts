@@ -124,7 +124,7 @@ export class LogsController {
 	/**
 	 * Stream logs via Server-Sent Events
 	 */
-	async streamLogs(req: Request, res: Response): Promise<void> {
+	streamLogs(req: Request, res: Response): void {
 		logger.info("Client connected to log stream");
 
 		// Set SSE headers
@@ -132,6 +132,10 @@ export class LogsController {
 		res.setHeader("Cache-Control", "no-cache");
 		res.setHeader("Connection", "keep-alive");
 		res.setHeader("Access-Control-Allow-Origin", "*");
+		res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+		// Send initial connection message
+		res.write(`:ok\n\n`);
 
 		// Send recent logs immediately
 		recentLogs.forEach((log) => {
@@ -141,8 +145,18 @@ export class LogsController {
 		// Add client to SSE clients list
 		sseClients.push(res);
 
+		// Send heartbeat every 30 seconds to keep connection alive
+		const heartbeatInterval = setInterval(() => {
+			try {
+				res.write(`:heartbeat\n\n`);
+			} catch (err) {
+				clearInterval(heartbeatInterval);
+			}
+		}, 30000);
+
 		// Remove client when connection closes
 		req.on("close", () => {
+			clearInterval(heartbeatInterval);
 			const index = sseClients.indexOf(res);
 			if (index !== -1) {
 				sseClients.splice(index, 1);

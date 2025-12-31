@@ -1,5 +1,5 @@
 import { AlertCircle, ChevronDown, ChevronUp, Info, Terminal, XCircle } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export interface ServerLogEntry {
     timestamp: string;
@@ -22,20 +22,31 @@ export function ServerLogs({ maxHeight = '500px' }: ServerLogsProps) {
     const [itemsPerPage, setItemsPerPage] = useState(50);
     const logsEndRef = useRef<HTMLDivElement>(null);
     const logsContainerRef = useRef<HTMLDivElement>(null);
+    const autoScrollRef = useRef(autoScroll);
 
     // Calculate pagination
-    const totalPages = Math.ceil(logs.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedLogs = logs.slice(startIndex, endIndex);
+    const totalPages = useMemo(() => Math.ceil(logs.length / itemsPerPage), [logs.length, itemsPerPage]);
+    const startIndex = useMemo(() => (currentPage - 1) * itemsPerPage, [currentPage, itemsPerPage]);
+    const endIndex = useMemo(() => startIndex + itemsPerPage, [startIndex, itemsPerPage]);
+    const paginatedLogs = useMemo(() => logs.slice(startIndex, endIndex), [logs, startIndex, endIndex]);
 
-    // Reset to last page when logs are added and auto-scroll is on
+    // Update autoScrollRef when autoScroll changes
     useEffect(() => {
-        if (autoScroll && logs.length > 0) {
+        autoScrollRef.current = autoScroll;
+    }, [autoScroll]);
+
+    // Update page when logs change and auto-scroll is enabled
+    useEffect(() => {
+        if (autoScrollRef.current && logs.length > 0) {
             const newTotalPages = Math.ceil(logs.length / itemsPerPage);
-            setCurrentPage(newTotalPages);
+            if (newTotalPages !== currentPage) {
+                // Use setTimeout to defer the state update and avoid cascading renders
+                setTimeout(() => {
+                    setCurrentPage(newTotalPages);
+                }, 0);
+            }
         }
-    }, [logs.length, itemsPerPage, autoScroll]);
+    }, [logs.length, itemsPerPage, currentPage]);
 
     // Auto-scroll to bottom when new logs arrive
     useEffect(() => {
@@ -247,8 +258,9 @@ export function ServerLogs({ maxHeight = '500px' }: ServerLogsProps) {
                         {logs.length > 0 && totalPages > 1 && (
                             <div className="mt-4 flex items-center justify-between border-t border-gray-800 pt-3">
                                 <div className="flex items-center gap-2">
-                                    <label className="text-xs text-gray-400">Per page:</label>
+                                    <label htmlFor="items-per-page" className="text-xs text-gray-400">Per page:</label>
                                     <select
+                                        id="items-per-page"
                                         value={itemsPerPage}
                                         onChange={(e) => {
                                             setItemsPerPage(Number(e.target.value));

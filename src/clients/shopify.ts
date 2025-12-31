@@ -30,6 +30,78 @@ export class ShopifyClient implements IShopifyClient {
 	private authenticated: boolean = false;
 	private shopDomain: string = "";
 	private accessToken: string = "";
+	private lastRequestTime: number = 0;
+	private readonly minRequestInterval: number = 550; // 550ms = ~1.8 requests/second (safer than 500ms for 2 req/s)
+
+	/**
+	 * Rate limiting: Wait to ensure we don't exceed Shopify's rate limits
+	 */
+	private async waitForRateLimit(): Promise<void> {
+		const now = Date.now();
+		const timeSinceLastRequest = now - this.lastRequestTime;
+
+		if (timeSinceLastRequest < this.minRequestInterval) {
+			const waitTime = this.minRequestInterval - timeSinceLastRequest;
+			await new Promise((resolve) => setTimeout(resolve, waitTime));
+		}
+
+		this.lastRequestTime = Date.now();
+	}
+
+	/**
+	 * Retry logic with exponential backoff for rate limit errors
+	 */
+	private async retryWithBackoff<T>(
+		operation: () => Promise<T>,
+		maxRetries: number = 3,
+	): Promise<T> {
+		let lastError: unknown;
+
+		for (let attempt = 0; attempt <= maxRetries; attempt++) {
+			try {
+				return await operation();
+			} catch (error) {
+				lastError = error;
+
+				// Check if it's a rate limit error
+				const isRateLimit = this.isRateLimitError(error);
+
+				if (!isRateLimit || attempt === maxRetries) {
+					throw error;
+				}
+
+				// Exponential backoff: 1s, 2s, 4s
+				const backoffTime = Math.pow(2, attempt) * 1000;
+				console.warn(
+					`[Shopify] Rate limit hit, retrying in ${backoffTime}ms (attempt ${attempt + 1}/${maxRetries})`,
+				);
+				await new Promise((resolve) => setTimeout(resolve, backoffTime));
+			}
+		}
+
+		throw lastError;
+	}
+
+	/**
+	 * Check if error is a rate limit error
+	 */
+	private isRateLimitError(error: unknown): boolean {
+		if (axios.isAxiosError(error)) {
+			const axiosError = error as AxiosError;
+			// Check status code (429) or error message
+			if (axiosError.response?.status === 429) {
+				return true;
+			}
+
+			const message = this.getErrorMessage(error).toLowerCase();
+			return (
+				message.includes("rate limit") ||
+				message.includes("exceeded") ||
+				message.includes("calls per second")
+			);
+		}
+		return false;
+	}
 
 	/**
 	 * Authenticate with Shopify API
@@ -63,6 +135,7 @@ export class ShopifyClient implements IShopifyClient {
 
 		try {
 			// Test authentication by fetching a single product
+			await this.waitForRateLimit();
 			await this.client.get("/products.json", {
 				params: { limit: 1 },
 			});
@@ -103,9 +176,12 @@ export class ShopifyClient implements IShopifyClient {
 					params.since_id = sinceId;
 				}
 
-				const response = await this.client.get<{
-					products: ShopifyApiProduct[];
-				}>("/products.json", { params });
+				await this.waitForRateLimit();
+				const response = await this.retryWithBackoff(() =>
+					this.client!.get<{
+						products: ShopifyApiProduct[];
+					}>("/products.json", { params }),
+				);
 
 				const products = response.data.products;
 
@@ -176,17 +252,23 @@ export class ShopifyClient implements IShopifyClient {
 
 		try {
 			// Fetch current variant to preserve other attributes (Requirement 5.4)
-			await this.client.get<{ variant: ShopifyApiVariant }>(
-				`/variants/${variantId}.json`,
+			await this.waitForRateLimit();
+			await this.retryWithBackoff(() =>
+				this.client!.get<{ variant: ShopifyApiVariant }>(
+					`/variants/${variantId}.json`,
+				),
 			);
 
 			// Only update price field, preserve all other attributes
-			await this.client.put(`/variants/${variantId}.json`, {
-				variant: {
-					id: variantId,
-					price: price.toFixed(2),
-				},
-			});
+			await this.waitForRateLimit();
+			await this.retryWithBackoff(() =>
+				this.client!.put(`/variants/${variantId}.json`, {
+					variant: {
+						id: variantId,
+						price: price.toFixed(2),
+					},
+				}),
+			);
 
 			console.log(
 				`[Shopify] Updated product ${productId} variant ${variantId} price to ${price}`,

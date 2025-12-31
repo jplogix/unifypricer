@@ -1,5 +1,9 @@
 import express from 'express';
 import cors from 'cors';
+
+// Import logs controller FIRST to intercept console methods before any logging happens
+import './api/logs-controller.js';
+
 import { config, validateConfig } from './config';
 
 // Validate configuration on startup
@@ -23,7 +27,12 @@ import { initializeDatabase } from './repositories/database';
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'X-Requested-With']
+}));
 app.use(express.json());
 
 // Health check endpoint
