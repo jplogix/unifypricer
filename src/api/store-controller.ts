@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
+import type { IConfigRepository } from "../repositories/config";
 import {
-	type ConfigRepository,
 	createStoreConfig,
 	getDecryptedCredentials,
 } from "../repositories/config";
@@ -11,7 +11,7 @@ const logger = new Logger("StoreController");
 
 export class StoreController {
 	constructor(
-		private configRepository: ConfigRepository,
+		private configRepository: IConfigRepository,
 		private statusRepository: StatusRepository,
 	) {}
 

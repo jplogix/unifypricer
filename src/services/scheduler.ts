@@ -1,7 +1,8 @@
-import { ConfigRepository, getDecryptedCredentials } from '../repositories/config';
-import { StatusRepository } from '../repositories/status';
-import { SyncService } from './sync-service';
-import { Store } from '../types';
+import type { IConfigRepository } from '../repositories/config';
+import { getDecryptedCredentials } from '../repositories/config';
+import type { StatusRepository } from '../repositories/status';
+import type { SyncService } from './sync-service';
+import type { Store } from '../types';
 import { Logger } from '../utils/logger';
 
 export class SchedulerService {
@@ -11,7 +12,7 @@ export class SchedulerService {
     private runningSyncs = new Set<string>();
 
     constructor(
-        private configRepository: ConfigRepository,
+        private configRepository: IConfigRepository,
         private statusRepository: StatusRepository,
         private syncService: SyncService
     ) { }
@@ -37,7 +38,7 @@ export class SchedulerService {
 
     private async checkAndSchedule() {
         try {
-            const stores = this.configRepository.getAllStoreConfigs();
+            const stores = await this.configRepository.getAllStoreConfigs();
 
             for (const config of stores) {
                 if (!config.enabled) continue;

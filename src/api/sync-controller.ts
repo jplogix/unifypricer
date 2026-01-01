@@ -1,21 +1,19 @@
 import type { Request, Response } from "express";
-import {
-	type ConfigRepository,
-	getDecryptedCredentials,
-} from "../repositories/config";
+import type { IConfigRepository } from "../repositories/config";
+import { getDecryptedCredentials } from "../repositories/config";
 import type { SyncService } from "../services/sync-service";
 import type { Store } from "../types";
 
 export class SyncController {
 	constructor(
 		private syncService: SyncService,
-		private configRepository: ConfigRepository,
+		private configRepository: IConfigRepository,
 	) {}
 
 	triggerSync = async (req: Request, res: Response) => {
 		const { storeId } = req.params;
 		try {
-			const config = this.configRepository.getStoreConfig(storeId);
+			const config = await this.configRepository.getStoreConfig(storeId);
 			if (!config) {
 				res.status(404).json({ error: "Store not found" });
 				return;

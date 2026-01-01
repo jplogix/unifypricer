@@ -4,11 +4,21 @@ import { decryptCredentials, encryptCredentials } from "../utils/encryption";
 import { getDatabaseConnection } from "./database";
 
 /**
+ * Common interface for all config repositories
+ */
+export interface IConfigRepository {
+	getStoreConfig(storeId: string): StoreConfig | Promise<StoreConfig | null> | null;
+	getAllStoreConfigs(): StoreConfig[] | Promise<StoreConfig[]>;
+	saveStoreConfig(config: StoreConfig): void | Promise<void>;
+	deleteStoreConfig(storeId: string): void | Promise<void>;
+}
+
+/**
  * Configuration Repository for managing store configurations
  * Handles CRUD operations for store configs with encrypted credentials
  */
 
-export class ConfigRepository {
+export class ConfigRepository implements IConfigRepository {
 	constructor(private explicitDb?: Database.Database) {}
 
 	private get db(): Database.Database {

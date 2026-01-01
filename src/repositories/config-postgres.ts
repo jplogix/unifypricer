@@ -1,12 +1,13 @@
 import type { Pool } from "pg";
 import type { Platform, StoreConfig } from "../types/index.js";
 import { decryptCredentials, encryptCredentials } from "../utils/encryption.js";
+import type { IConfigRepository } from "./config.js";
 import { getPostgresConnection } from "./postgres-database.js";
 
 /**
  * Configuration Repository for PostgreSQL
  */
-export class ConfigRepositoryPostgres {
+export class ConfigRepositoryPostgres implements IConfigRepository {
 	constructor(private explicitPool?: Pool) {}
 
 	private get pool(): Pool {

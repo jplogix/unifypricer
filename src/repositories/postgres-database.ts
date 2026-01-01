@@ -1,4 +1,4 @@
-import type { Pool, PoolClient, QueryResult } from "pg";
+import type { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 import * as pg from "pg";
 import { Logger } from "../utils/logger.js";
 
@@ -78,12 +78,12 @@ export class PostgresConnection {
 	/**
 	 * Execute a query
 	 */
-	async query<T = unknown>(
+	async query<T extends QueryResultRow = QueryResultRow>(
 		text: string,
 		params?: unknown[],
 	): Promise<QueryResult<T>> {
 		const pool = this.getPool();
-		return pool.query(text, params);
+		return pool.query<T>(text, params);
 	}
 
 	/**
