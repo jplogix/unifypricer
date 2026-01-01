@@ -2,8 +2,12 @@ import type { Request, Response } from "express";
 import {
 	type ConfigRepository,
 	createStoreConfig,
+	getDecryptedCredentials,
 } from "../repositories/config";
 import type { StatusRepository } from "../repositories/status";
+import { Logger } from "../utils/logger.js";
+
+const logger = new Logger("StoreController");
 
 export class StoreController {
 	constructor(
@@ -13,12 +17,50 @@ export class StoreController {
 
 	getAllStores = async (_req: Request, res: Response) => {
 		try {
-			const configs = this.configRepository.getAllStoreConfigs();
+			const configs = await this.configRepository.getAllStoreConfigs();
 			// Don't expose sensitive credentials in API response
 			const stores = configs.map(({ credentials, ...rest }) => rest);
 			res.json(stores);
 		} catch {
 			res.status(500).json({ error: "Failed to fetch stores" });
+		}
+	};
+
+	/**
+	 * Get a single store with decrypted credentials (for editing)
+	 * GET /api/stores/:storeId
+	 */
+	getStore = async (req: Request, res: Response): Promise<void> => {
+		try {
+			const { storeId } = req.params;
+
+			const config = await this.configRepository.getStoreConfig(storeId);
+
+			if (!config) {
+				res.status(404).json({ error: "Store not found" });
+				return;
+			}
+
+			// Decrypt credentials for editing
+			const decryptedCredentials = getDecryptedCredentials(config);
+
+			// Return store with decrypted credentials
+			const storeWithCredentials = {
+				storeId: config.storeId,
+				storeName: config.storeName,
+				platform: config.platform,
+				credentials: decryptedCredentials,
+				syncInterval: config.syncInterval,
+				enabled: config.enabled,
+			};
+
+			res.json(storeWithCredentials);
+		} catch (error) {
+			logger.error("Failed to get store:", error);
+			res.status(500).json({
+				error: "Failed to get store",
+				details: error instanceof Error ? error.message : String(error),
+			});
 		}
 	};
 
@@ -32,7 +74,7 @@ export class StoreController {
 			}
 
 			// If no status found, check if store exists
-			const config = this.configRepository.getStoreConfig(storeId);
+			const config = await this.configRepository.getStoreConfig(storeId);
 			if (!config) {
 				res.status(404).json({ error: "Store not found" });
 				return;
@@ -80,7 +122,7 @@ export class StoreController {
 				config.enabled ?? true,
 			);
 
-			this.configRepository.saveStoreConfig(storeConfig);
+			await this.configRepository.saveStoreConfig(storeConfig);
 			res.status(201).json({ message: "Store created successfully" });
 		} catch (error) {
 			console.error("Failed to create store:", error);

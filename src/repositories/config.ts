@@ -24,7 +24,11 @@ export class ConfigRepository {
 	 * @param storeId - The unique store identifier
 	 * @returns Store configuration with decrypted credentials, or null if not found
 	 */
-	getStoreConfig(storeId: string): StoreConfig | null {
+	getStoreConfig(storeId: string): StoreConfig | null;
+	async getStoreConfig(storeId: string): Promise<StoreConfig | null>;
+	getStoreConfig(
+		storeId: string,
+	): StoreConfig | Promise<StoreConfig | null> | null {
 		try {
 			const query = this.db.prepare(`
         SELECT id, name, platform, credentials_encrypted, credentials_iv, 
@@ -59,7 +63,9 @@ export class ConfigRepository {
 	 * Get all store configurations
 	 * @returns Array of all store configurations with decrypted credentials
 	 */
-	getAllStoreConfigs(): StoreConfig[] {
+	getAllStoreConfigs(): StoreConfig[];
+	async getAllStoreConfigs(): Promise<StoreConfig[]>;
+	getAllStoreConfigs(): StoreConfig[] | Promise<StoreConfig[]> {
 		try {
 			const query = this.db.prepare(`
         SELECT id, name, platform, credentials_encrypted, credentials_iv, 
@@ -88,7 +94,9 @@ export class ConfigRepository {
 
 	/**
 	 * Save or update store configuration
-	 * @param config - Store configuration to save
+	 * @param config - Store configuration to ;
+	async saveStoreConfig(config: StoreConfig): Promise<void>;
+	saveStoreConfig(config: StoreConfig): void | Promise<void>save
 	 */
 	saveStoreConfig(config: StoreConfig): void {
 		try {
@@ -111,7 +119,9 @@ export class ConfigRepository {
 
 	/**
 	 * Delete store configuration
-	 * @param storeId - The unique store identifier
+	 * @param storeId - The unique store ide;
+	async deleteStoreConfig(storeId: string): Promise<void>;
+	deleteStoreConfig(storeId: string): void | Promise<void>ntifier
 	 */
 	deleteStoreConfig(storeId: string): void {
 		try {

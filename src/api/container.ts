@@ -1,14 +1,20 @@
 import { ShopifyClient } from "../clients/shopify";
 import { StreetPricerClient } from "../clients/streetpricer";
 import { WooCommerceClient } from "../clients/woocommerce";
+import { config } from "../config/index.js";
 import { AuditRepository } from "../repositories/audit";
 import { ConfigRepository } from "../repositories/config";
+import { ConfigRepositoryPostgres } from "../repositories/config-postgres.js";
 import { StatusRepository } from "../repositories/status";
 import { ProductMatcher } from "../services/product-matcher";
 import { SyncService } from "../services/sync-service";
 
-// Singleton instances
-export const configRepository = new ConfigRepository();
+// Singleton instances - use PostgreSQL or SQLite based on config
+export const configRepository =
+	config.database.type === "postgres"
+		? new ConfigRepositoryPostgres()
+		: new ConfigRepository();
+
 export const statusRepository = new StatusRepository();
 export const auditRepository = new AuditRepository();
 

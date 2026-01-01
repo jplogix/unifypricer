@@ -79,9 +79,23 @@ function App() {
     }
   };
 
-  const handleEditStore = (store: StoreConfig) => {
-    setSelectedStore(store);
-    setConfigStep('form');
+  const handleEditStore = async (store: StoreConfig) => {
+    try {
+      // Fetch the full store config with credentials from the server
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiUrl}/api/stores/${store.storeId}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch store details');
+      }
+
+      const storeWithCredentials = await response.json();
+      setSelectedStore(storeWithCredentials);
+      setConfigStep('form');
+    } catch (error) {
+      logger.error('Failed to fetch store for editing:', error);
+      showError('Failed to load store details. Please try again.');
+    }
   };
 
   const handleConfigSave = async () => {

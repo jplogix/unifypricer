@@ -282,7 +282,7 @@ export function ServerLogs({ maxHeight = '500px' }: ServerLogsProps) {
                                         type="button"
                                         onClick={() => setCurrentPage(1)}
                                         disabled={currentPage === 1}
-                                        className="px-2 py-1 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-2 py-1 text-xs bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-700 rounded"
                                     >
                                         ««
                                     </button>
@@ -290,18 +290,18 @@ export function ServerLogs({ maxHeight = '500px' }: ServerLogsProps) {
                                         type="button"
                                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                         disabled={currentPage === 1}
-                                        className="px-2 py-1 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-2 py-1 text-xs bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-700 rounded"
                                     >
                                         «
                                     </button>
-                                    <span className="px-3 py-1 text-xs text-gray-300">
+                                    <span className="px-3 py-1 text-xs text-gray-200 font-medium">
                                         Page {currentPage} of {totalPages}
                                     </span>
                                     <button
                                         type="button"
                                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                         disabled={currentPage === totalPages}
-                                        className="px-2 py-1 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-2 py-1 text-xs bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-700 rounded"
                                     >
                                         »
                                     </button>
@@ -309,7 +309,7 @@ export function ServerLogs({ maxHeight = '500px' }: ServerLogsProps) {
                                         type="button"
                                         onClick={() => setCurrentPage(totalPages)}
                                         disabled={currentPage === totalPages}
-                                        className="px-2 py-1 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-2 py-1 text-xs bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-700 rounded"
                                     >
                                         »»
                                     </button>

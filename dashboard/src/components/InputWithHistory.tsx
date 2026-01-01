@@ -136,7 +136,7 @@ export function InputWithHistory({
     return (
         <div className="relative">
             {label && (
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="input-with-history" className="block text-sm font-medium text-gray-700 mb-1">
                     {label}
                     {required && <span className="text-red-500 ml-1">*</span>}
                 </label>
@@ -144,6 +144,7 @@ export function InputWithHistory({
 
             <div className="relative">
                 <input
+                    id="input-with-history"
                     ref={inputRef}
                     type={type}
                     value={value}
@@ -176,12 +177,19 @@ export function InputWithHistory({
                 >
                     <div className="py-1">
                         {suggestions.map((suggestion, index) => (
-                            <div
+                            <button
                                 key={suggestion}
                                 onClick={() => handleSuggestionClick(suggestion)}
-                                className={`px-3 py-2 cursor-pointer flex items-center justify-between group ${index === selectedIndex
-                                        ? 'bg-blue-50 text-blue-700'
-                                        : 'text-gray-700 hover:bg-gray-50'
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        handleSuggestionClick(suggestion);
+                                    }
+                                }}
+                                type="button"
+                                className={`w-full text-left px-3 py-2 cursor-pointer flex items-center justify-between group ${index === selectedIndex
+                                    ? 'bg-blue-50 text-blue-700'
+                                    : 'text-gray-700 hover:bg-gray-50'
                                     }`}
                             >
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -190,12 +198,13 @@ export function InputWithHistory({
                                 </div>
                                 <button
                                     onClick={(e) => handleRemoveSuggestion(e, suggestion)}
+                                    type="button"
                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
                                     title="Remove from history"
                                 >
                                     <X className="w-3 h-3 text-gray-500" />
                                 </button>
-                            </div>
+                            </button>
                         ))}
                     </div>
                 </div>

@@ -278,17 +278,17 @@ describe("ConfigRepository", () => {
 
 			const configs = repo.getAllStoreConfigs();
 
-			const decrypted1 = getDecryptedCredentials(
-				configs.find((c) => c.storeId === "store-1")!,
-				testEncryptionKey,
-			);
-			const decrypted2 = getDecryptedCredentials(
-				configs.find((c) => c.storeId === "store-2")!,
-				testEncryptionKey,
-			);
+			const store1Config = configs.find((c) => c.storeId === "store-1");
+			const store2Config = configs.find((c) => c.storeId === "store-2");
+			const decrypted1 = store1Config
+				? getDecryptedCredentials(store1Config, testEncryptionKey)
+				: null;
+			const decrypted2 = store2Config
+				? getDecryptedCredentials(store2Config, testEncryptionKey)
+				: null;
 
-			expect(decrypted1.key).toBe("val1");
-			expect(decrypted2.key).toBe("val2");
+			expect(decrypted1?.key).toBe("val1");
+			expect(decrypted2?.key).toBe("val2");
 		});
 	});
 

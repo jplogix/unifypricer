@@ -27,6 +27,7 @@ router.use("/logs", logsRouter);
 
 // Store routes
 router.get("/stores", storeController.getAllStores);
+router.get("/stores/:storeId", storeController.getStore);
 router.post("/stores", storeController.createStore);
 router.get("/stores/:storeId/status", storeController.getStoreStatus);
 router.get("/stores/:storeId/products", storeController.getStoreProducts);
