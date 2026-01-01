@@ -59,9 +59,6 @@ app.use(express.static(path.join(process.cwd(), "public")));
 
 const PORT = config.server.port;
 
-// Apply error handler last
-app.use(errorHandler);
-
 // Handle client-side routing by serving index.html for non-API routes
 app.get("*", (req, res, next) => {
 	if (req.path.startsWith("/api")) {
@@ -86,40 +83,16 @@ if (require.main === module) {
 		process.exit(1);
 	}
 
-	// Initialize database on startup
-	const initDb = async () => {
-		try {
-			if (config.database.type === "postgres") {
-				logger.info("Initializing PostgreSQL database...");
-				await initializePostgres(config.database.url);
-				logger.info("PostgreSQL initialized successfully");
-			} else {
-				logger.info("Initializing SQLite database...");
-				initializeDatabase(config.database.path);
-				logger.info("SQLite initialized successfully");
-			}
-
-			app.listen(PORT, () => {
-				logger.info(`Price Sync Dashboard API running on port ${PORT}`);
-				logger.info(`Environment: ${config.server.nodeEnv}`);
-				logger.info(`Database: ${config.database.type}`);
-
-				// Start scheduler
-				scheduler.start();
-			});
-		} catch (error) {
-			console.error("Databaand start server
+	// Start server with async database initialization
 	const startServer = async () => {
 		try {
 			await initializeDatabaseConnection();
 
 			// NOW import routes and container AFTER database is connected
 			const { router: apiRouter } = await import("./api/routes.js");
-			const {
-				configRepository,
-				statusRepository,
-				syncService,
-			} = await import("./api/container.js");
+			const { configRepository, statusRepository, syncService } = await import(
+				"./api/container.js"
+			);
 			const { errorHandler } = await import("./middleware/error-handler.js");
 			const { SchedulerService } = await import("./services/scheduler.js");
 
@@ -150,4 +123,5 @@ if (require.main === module) {
 		}
 	};
 
-	startServer
+	startServer();
+}

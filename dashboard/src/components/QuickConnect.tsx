@@ -140,7 +140,9 @@ const QuickConnect: React.FC<QuickConnectProps> = ({ onConnect, onCancel }) => {
         <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
           <div className="flex justify-between items-center p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">Choose Your Platform</h2>
-            <button onClick={onCancel} className="text-gray-400 hover:text-gray-500">
+            <button onClick={onCancel}
+              type='button'
+              className="text-gray-400 hover:text-gray-500">
               <X className="w-5 h-5" />
             </button>
           </div>
