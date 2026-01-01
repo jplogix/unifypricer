@@ -7,6 +7,27 @@ import "./api/logs-controller.js";
 import { config, validateConfig } from "./config";
 import { initializeDatabase } from "./repositories/database";
 import { initializePostgres } from "./repositories/postgres-database.js";
+import { Logger } from "./utils/logger";
+
+const logger = new Logger("Server");
+
+// Initialize database FIRST before any imports that use it
+async function initializeDatabaseConnection() {
+	try {
+		if (config.database.type === "postgres") {
+			logger.info("Initializing PostgreSQL database...");
+			await initializePostgres(config.database.url);
+			logger.info("PostgreSQL initialized successfully");
+		} else {
+			logger.info("Initializing SQLite database...");
+			initializeDatabase(config.database.path);
+			logger.info("SQLite initialized successfully");
+		}
+	} catch (error) {
+		console.error("Database initialization failed:", error);
+		throw error;
+	}
+}
 
 const app = express();
 
@@ -31,34 +52,12 @@ app.get("/health", (_req, res) => {
 	res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-import { router as apiRouter } from "./api/routes";
-
-// API routes
-app.use("/api", apiRouter);
-
 // Serve static files from 'public' directory (where frontend build will be)
 import path from "node:path";
 
 app.use(express.static(path.join(process.cwd(), "public")));
 
 const PORT = config.server.port;
-
-import {
-	configRepository,
-	statusRepository,
-	syncService,
-} from "./api/container";
-import { errorHandler } from "./middleware/error-handler";
-// Initialize Scheduler
-import { SchedulerService } from "./services/scheduler";
-import { Logger } from "./utils/logger";
-
-const logger = new Logger("Server");
-const scheduler = new SchedulerService(
-	configRepository,
-	statusRepository,
-	syncService,
-);
 
 // Apply error handler last
 app.use(errorHandler);
@@ -109,12 +108,46 @@ if (require.main === module) {
 				scheduler.start();
 			});
 		} catch (error) {
-			console.error("Database initialization failed:", error);
+			console.error("Databaand start server
+	const startServer = async () => {
+		try {
+			await initializeDatabaseConnection();
+
+			// NOW import routes and container AFTER database is connected
+			const { router: apiRouter } = await import("./api/routes.js");
+			const {
+				configRepository,
+				statusRepository,
+				syncService,
+			} = await import("./api/container.js");
+			const { errorHandler } = await import("./middleware/error-handler.js");
+			const { SchedulerService } = await import("./services/scheduler.js");
+
+			// API routes
+			app.use("/api", apiRouter);
+
+			// Apply error handler last
+			app.use(errorHandler);
+
+			// Initialize scheduler
+			const scheduler = new SchedulerService(
+				configRepository,
+				statusRepository,
+				syncService,
+			);
+
+			app.listen(PORT, () => {
+				logger.info(`Price Sync Dashboard API running on port ${PORT}`);
+				logger.info(`Environment: ${config.server.nodeEnv}`);
+				logger.info(`Database: ${config.database.type}`);
+
+				// Start scheduler
+				scheduler.start();
+			});
+		} catch (error) {
+			console.error("Server startup failed:", error);
 			process.exit(1);
 		}
 	};
 
-	initDb();
-}
-
-export default app;
+	startServer

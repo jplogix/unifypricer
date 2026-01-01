@@ -11,6 +11,7 @@ import { ProductMatcher } from "../services/product-matcher";
 import { SyncService } from "../services/sync-service";
 
 // Singleton instances - use PostgreSQL or SQLite based on config
+// Database connection must be initialized BEFORE this module is imported
 export const configRepository: IConfigRepository =
 	config.database.type === "postgres"
 		? new ConfigRepositoryPostgres()
