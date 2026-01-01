@@ -7,7 +7,9 @@ import { getDatabaseConnection } from "./database";
  * Common interface for all config repositories
  */
 export interface IConfigRepository {
-	getStoreConfig(storeId: string): StoreConfig | Promise<StoreConfig | null> | null;
+	getStoreConfig(
+		storeId: string,
+	): StoreConfig | Promise<StoreConfig | null> | null;
 	getAllStoreConfigs(): StoreConfig[] | Promise<StoreConfig[]>;
 	saveStoreConfig(config: StoreConfig): void | Promise<void>;
 	deleteStoreConfig(storeId: string): void | Promise<void>;
