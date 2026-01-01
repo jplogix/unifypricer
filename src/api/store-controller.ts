@@ -56,7 +56,9 @@ export class StoreController {
 
 			res.json(storeWithCredentials);
 		} catch (error) {
-			logger.error("Failed to get store:", error);
+			logger.error("Failed to get store:", {
+				error: error instanceof Error ? error.message : String(error),
+			});
 			res.status(500).json({
 				error: "Failed to get store",
 				details: error instanceof Error ? error.message : String(error),
