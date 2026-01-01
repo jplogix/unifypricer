@@ -93,7 +93,7 @@ function App() {
       setSelectedStore(storeWithCredentials);
       setConfigStep('form');
     } catch (error) {
-      logger.error('Failed to fetch store for editing:', error);
+      console.error('Failed to fetch store for editing:', error);
       showError('Failed to load store details. Please try again.');
     }
   };
