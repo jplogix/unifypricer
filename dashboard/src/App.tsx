@@ -10,7 +10,7 @@ import { useStoreStatus } from './hooks/useStoreStatus';
 import { useStores } from './hooks/useStores';
 import { useToast } from './hooks/useToast';
 import { storeService } from './services/api';
-import type { StoreConfig } from './types';
+import type { StoreConfig, StoreConfigWithCredentials } from './types';
 
 type ConfigStep = 'quickconnect' | 'form' | null;
 
@@ -18,7 +18,7 @@ function App() {
   const { stores, loading, error, refreshStores } = useStores();
   const { toasts, removeToast, success, error: showError, info } = useToast();
   const [configStep, setConfigStep] = useState<ConfigStep>(null);
-  const [selectedStore, setSelectedStore] = useState<StoreConfig | undefined>(undefined);
+  const [selectedStore, setSelectedStore] = useState<StoreConfigWithCredentials | undefined>(undefined);
   const [syncingStoreId, setSyncingStoreId] = useState<string | null>(null);
 
   // Monitor status of currently syncing store
@@ -81,15 +81,7 @@ function App() {
 
   const handleEditStore = async (store: StoreConfig) => {
     try {
-      // Fetch the full store config with credentials from the server
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const response = await fetch(`${apiUrl}/api/stores/${store.storeId}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch store details');
-      }
-
-      const storeWithCredentials = await response.json();
+      const storeWithCredentials = await storeService.getStore(store.storeId);
       setSelectedStore(storeWithCredentials);
       setConfigStep('form');
     } catch (error) {
@@ -220,5 +212,4 @@ function App() {
 
 
 export default App;
-
 

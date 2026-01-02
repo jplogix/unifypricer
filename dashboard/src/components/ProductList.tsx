@@ -69,7 +69,9 @@ const ProductList: React.FC<ProductListProps> = ({ storeId }) => {
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {product.currentPrice ? `$${product.currentPrice.toFixed(2)}` : '-'}
+                                    {typeof product.currentPrice === 'number' && Number.isFinite(product.currentPrice)
+                                        ? `$${product.currentPrice.toFixed(2)}`
+                                        : '-'}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {new Date(product.lastAttempt).toLocaleTimeString()}

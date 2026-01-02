@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Save, X } from 'lucide-react';
-import type { StoreConfig } from '../types';
+import type { StoreConfig, StoreConfigWithCredentials } from '../types';
 import { storeService } from '../services/api';
 
 interface StoreConfigurationProps {
-    initialConfig?: StoreConfig;
+    initialConfig?: StoreConfig | StoreConfigWithCredentials;
     selectedPlatform?: 'woocommerce' | 'shopify';
     pendingStoreName?: string;
     pendingStoreUrl?: string;

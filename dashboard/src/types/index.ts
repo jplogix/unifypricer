@@ -8,6 +8,17 @@ export interface StoreConfig {
     updatedAt: string;
 }
 
+export interface StoreConfigWithCredentials {
+    storeId: string;
+    storeName: string;
+    platform: 'woocommerce' | 'shopify';
+    syncInterval: number;
+    enabled: boolean;
+    credentials: Record<string, unknown>;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
 export type SyncStatus = 'success' | 'partial' | 'failed' | 'pending';
 
 export interface SyncHistoryRecord {

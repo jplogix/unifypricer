@@ -1,5 +1,10 @@
 import axios from "axios";
-import type { ProductStatusRecord, StoreConfig, SyncStatus } from "../types";
+import type {
+	ProductStatusRecord,
+	StoreConfig,
+	StoreConfigWithCredentials,
+	SyncStatus,
+} from "../types";
 
 export const API_URL =
 	import.meta.env.MODE === "development" ? "http://localhost:3000/api" : "/api";
@@ -24,6 +29,11 @@ export interface StoreStatus {
 export const storeService = {
 	getAll: async (): Promise<StoreConfig[]> => {
 		const response = await api.get("/stores");
+		return response.data;
+	},
+
+	getStore: async (storeId: string): Promise<StoreConfigWithCredentials> => {
+		const response = await api.get(`/stores/${storeId}`);
 		return response.data;
 	},
 

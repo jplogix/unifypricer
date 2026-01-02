@@ -9,6 +9,14 @@ import type {
 import { getPostgresConnection } from "./postgres-database.js";
 import type { IStatusRepository } from "./status.js";
 
+const normalizePrice = (value: unknown): number | undefined => {
+	if (value === null || value === undefined) {
+		return undefined;
+	}
+	const num = typeof value === "number" ? value : Number(value);
+	return Number.isFinite(num) ? num : undefined;
+};
+
 /**
  * PostgreSQL Repository for managing sync status and product status data
  */
@@ -349,8 +357,8 @@ export class StatusRepositoryPostgres implements IStatusRepository {
 				lastAttempt: new Date(row.last_attempt),
 				lastSuccess: row.last_success ? new Date(row.last_success) : undefined,
 				errorMessage: row.error_message ?? undefined,
-				currentPrice: row.current_price,
-				targetPrice: row.target_price,
+				currentPrice: normalizePrice(row.current_price),
+				targetPrice: normalizePrice(row.target_price),
 			}));
 		} catch (error) {
 			throw new Error(

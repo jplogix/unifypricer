@@ -1,5 +1,6 @@
 import { AlertCircle, ChevronDown, ChevronUp, Info, Terminal, XCircle } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { API_URL } from '../services/api';
 
 export interface ServerLogEntry {
     timestamp: string;
@@ -66,8 +67,8 @@ export function ServerLogs({ maxHeight = '500px' }: ServerLogsProps) {
     useEffect(() => {
         if (isCollapsed) return;
 
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-        const eventSource = new EventSource(`${apiUrl}/api/logs/stream`);
+        const apiHost = API_URL.replace(/\/api$/, '');
+        const eventSource = new EventSource(`${apiHost}/api/logs/stream`);
 
         let connectionTimer: number | undefined;
         let hasReceivedData = false;
