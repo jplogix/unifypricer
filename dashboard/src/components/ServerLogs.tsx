@@ -69,11 +69,23 @@ export function ServerLogs({ maxHeight = '500px' }: ServerLogsProps) {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
         const eventSource = new EventSource(`${apiUrl}/api/logs/stream`);
 
+        let connectionTimer: number | undefined;
+        let hasReceivedData = false;
+
         eventSource.onopen = () => {
+            console.log('[ServerLogs] SSE connection opened');
             setIsConnected(true);
+            if (connectionTimer) clearTimeout(connectionTimer);
         };
 
         eventSource.onmessage = (event) => {
+            // Set connected on first message if not already set
+            if (!hasReceivedData) {
+                hasReceivedData = true;
+                setIsConnected(true);
+            }
+            if (connectionTimer) clearTimeout(connectionTimer);
+
             try {
                 const logEntry: ServerLogEntry = JSON.parse(event.data);
                 setLogs((prev) => [...prev.slice(-500), logEntry]); // Keep last 500 logs
@@ -82,12 +94,21 @@ export function ServerLogs({ maxHeight = '500px' }: ServerLogsProps) {
             }
         };
 
-        eventSource.onerror = () => {
+        eventSource.onerror = (error) => {
+            console.error('[ServerLogs] SSE connection error:', error);
             setIsConnected(false);
             eventSource.close();
         };
 
+        // Set a timeout to mark as connected after initial connection
+        connectionTimer = setTimeout(() => {
+            if (eventSource.readyState === EventSource.OPEN) {
+                setIsConnected(true);
+            }
+        }, 1000);
+
         return () => {
+            if (connectionTimer) clearTimeout(connectionTimer);
             eventSource.close();
             setIsConnected(false);
         };
