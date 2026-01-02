@@ -85,8 +85,8 @@ export class StatusRepositoryPostgres implements IStatusRepository {
 			const result = await db.query(
 				`SELECT 
           sh.store_id,
-          s.store_name as store_name,
-          s.store_type as platform,
+          s.name as store_name,
+          s.platform as platform,
           sh.repriced_count,
           sh.pending_count,
           sh.unlisted_count,
@@ -95,7 +95,7 @@ export class StatusRepositoryPostgres implements IStatusRepository {
           sh.started_at,
           sh.completed_at
         FROM sync_history sh
-        JOIN stores s ON sh.store_id = s.store_id
+        JOIN stores s ON sh.store_id = s.id
         WHERE sh.store_id = $1
         ORDER BY COALESCE(sh.completed_at, sh.started_at) DESC
         LIMIT 1`,
