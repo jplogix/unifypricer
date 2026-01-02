@@ -174,7 +174,7 @@ export function ServerLogs({ maxHeight = '500px' }: ServerLogsProps) {
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all duration-300 ease-in-out">
             {/* Header - Always Visible */}
             <button
                 type="button"
@@ -217,130 +217,131 @@ export function ServerLogs({ maxHeight = '500px' }: ServerLogsProps) {
                 </div>
             </button>
 
-            {/* Logs Content - Collapsible */}
-            {!isCollapsed && (
-                <div className="border-t border-gray-200 bg-gray-900">
-                    <div className="p-4">
-                        <div
-                            ref={logsContainerRef}
-                            onScroll={handleScroll}
-                            className="space-y-0.5 overflow-y-auto rounded-lg"
-                            style={{ maxHeight }}
-                        >
-                            {logs.length === 0 && (
-                                <div className="text-gray-500 text-center py-12 text-sm">
-                                    {isConnected ? 'Waiting for logs...' : 'Connecting to server...'}
-                                </div>
-                            )}
-                            {paginatedLogs.map((log, index) => (
-                                <div
-                                    key={`${log.timestamp}-${startIndex + index}`}
-                                    className="flex items-start gap-2 py-1 px-2 hover:bg-gray-800 rounded font-mono text-xs"
-                                >
-                                    <span className="text-gray-500 shrink-0 mt-0.5">
-                                        {formatTime(log.timestamp)}
-                                    </span>
-                                    <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${getLevelBadgeColor(log.level)}`}>
-                                        {log.level}
-                                    </span>
-                                    <span className="text-purple-400 shrink-0 mt-0.5">
-                                        [{log.context}]
-                                    </span>
-                                    <span className="shrink-0 mt-0.5">
-                                        {getIcon(log.level)}
-                                    </span>
-                                    <span className={`flex-1 ${getTextColor(log.level)} leading-relaxed`}>
-                                        {log.message}
-                                        {log.meta && Object.keys(log.meta).length > 0 && (
-                                            <span className="block text-gray-500 mt-1 text-[11px]">
-                                                {JSON.stringify(log.meta)}
-                                            </span>
-                                        )}
-                                    </span>
-                                </div>
-                            ))}
-                            <div ref={logsEndRef} />
+            {/* Logs Content - Collapsible with fixed height */}
+            <div
+                className={`border-t border-gray-200 bg-gray-900 transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'h-0 opacity-0' : 'opacity-100'
+                    }`}
+                style={{ height: isCollapsed ? '0px' : maxHeight }}
+            >
+                <div className="p-4 h-full flex flex-col">
+                    <div
+                        ref={logsContainerRef}
+                        onScroll={handleScroll}
+                        className="space-y-0.5 overflow-y-auto rounded-lg flex-1"
+                    >
+                        {logs.length === 0 && (
+                            <div className="text-gray-500 text-center py-12 text-sm">
+                                {isConnected ? 'Waiting for logs...' : 'Connecting to server...'}
+                            </div>
+                        )}
+                        {paginatedLogs.map((log, index) => (
+                            <div
+                                key={`${log.timestamp}-${startIndex + index}`}
+                                className="flex items-start gap-2 py-1 px-2 hover:bg-gray-800 rounded font-mono text-xs"
+                            >
+                                <span className="text-gray-500 shrink-0 mt-0.5">
+                                    {formatTime(log.timestamp)}
+                                </span>
+                                <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${getLevelBadgeColor(log.level)}`}>
+                                    {log.level}
+                                </span>
+                                <span className="text-purple-400 shrink-0 mt-0.5">
+                                    [{log.context}]
+                                </span>
+                                <span className="shrink-0 mt-0.5">
+                                    {getIcon(log.level)}
+                                </span>
+                                <span className={`flex-1 ${getTextColor(log.level)} leading-relaxed`}>
+                                    {log.message}
+                                    {log.meta && Object.keys(log.meta).length > 0 && (
+                                        <span className="block text-gray-500 mt-1 text-[11px]">
+                                            {JSON.stringify(log.meta)}
+                                        </span>
+                                    )}
+                                </span>
+                            </div>
+                        ))}
+                        <div ref={logsEndRef} />
+                    </div>
+                    {!autoScroll && !isCollapsed && (
+                        <div className="mt-2 text-center">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAutoScroll(true);
+                                    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                                }}
+                                className="text-xs text-blue-400 hover:text-blue-300"
+                            >
+                                ↓ Scroll to bottom
+                            </button>
                         </div>
-                        {!autoScroll && (
-                            <div className="mt-2 text-center">
+                    )}
+
+                    {/* Pagination Controls */}
+                    {logs.length > 0 && totalPages > 1 && !isCollapsed && (
+                        <div className="mt-3 flex items-center justify-between border-t border-gray-800 pt-3">
+                            <div className="flex items-center gap-2">
+                                <label htmlFor="items-per-page" className="text-xs text-gray-400">Per page:</label>
+                                <select
+                                    id="items-per-page"
+                                    value={itemsPerPage}
+                                    onChange={(e) => {
+                                        setItemsPerPage(Number(e.target.value));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="bg-gray-800 text-gray-300 text-xs rounded px-2 py-1 border border-gray-700"
+                                >
+                                    <option value={25}>25</option>
+                                    <option value={50}>50</option>
+                                    <option value={100}>100</option>
+                                    <option value={200}>200</option>
+                                </select>
+                                <span className="text-xs text-gray-500">
+                                    Showing {startIndex + 1}-{Math.min(endIndex, logs.length)} of {logs.length}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1">
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setAutoScroll(true);
-                                        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                                    }}
-                                    className="text-xs text-blue-400 hover:text-blue-300"
+                                    onClick={() => setCurrentPage(1)}
+                                    disabled={currentPage === 1}
+                                    className="px-2 py-1 text-xs bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-700 rounded"
                                 >
-                                    ↓ Scroll to bottom
+                                    ««
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-2 py-1 text-xs bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-700 rounded"
+                                >
+                                    «
+                                </button>
+                                <span className="px-3 py-1 text-xs text-gray-200 font-medium">
+                                    Page {currentPage} of {totalPages}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-2 py-1 text-xs bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-700 rounded"
+                                >
+                                    »
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    disabled={currentPage === totalPages}
+                                    className="px-2 py-1 text-xs bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-700 rounded"
+                                >
+                                    »»
                                 </button>
                             </div>
-                        )}
-
-                        {/* Pagination Controls */}
-                        {logs.length > 0 && totalPages > 1 && (
-                            <div className="mt-4 flex items-center justify-between border-t border-gray-800 pt-3">
-                                <div className="flex items-center gap-2">
-                                    <label htmlFor="items-per-page" className="text-xs text-gray-400">Per page:</label>
-                                    <select
-                                        id="items-per-page"
-                                        value={itemsPerPage}
-                                        onChange={(e) => {
-                                            setItemsPerPage(Number(e.target.value));
-                                            setCurrentPage(1);
-                                        }}
-                                        className="bg-gray-800 text-gray-300 text-xs rounded px-2 py-1 border border-gray-700"
-                                    >
-                                        <option value={25}>25</option>
-                                        <option value={50}>50</option>
-                                        <option value={100}>100</option>
-                                        <option value={200}>200</option>
-                                    </select>
-                                    <span className="text-xs text-gray-500">
-                                        Showing {startIndex + 1}-{Math.min(endIndex, logs.length)} of {logs.length}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => setCurrentPage(1)}
-                                        disabled={currentPage === 1}
-                                        className="px-2 py-1 text-xs bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-700 rounded"
-                                    >
-                                        ««
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                        disabled={currentPage === 1}
-                                        className="px-2 py-1 text-xs bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-700 rounded"
-                                    >
-                                        «
-                                    </button>
-                                    <span className="px-3 py-1 text-xs text-gray-200 font-medium">
-                                        Page {currentPage} of {totalPages}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                        disabled={currentPage === totalPages}
-                                        className="px-2 py-1 text-xs bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-700 rounded"
-                                    >
-                                        »
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setCurrentPage(totalPages)}
-                                        disabled={currentPage === totalPages}
-                                        className="px-2 py-1 text-xs bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-700 rounded"
-                                    >
-                                        »»
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
         </div>
     );
 }
