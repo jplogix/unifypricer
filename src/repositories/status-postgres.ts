@@ -1,4 +1,3 @@
-import type Database from "better-sqlite3";
 import type {
 	ProductStatusRecord,
 	ProductSyncStatus,
@@ -7,66 +6,19 @@ import type {
 	SyncHistoryRecord,
 	SyncStatus,
 } from "../types/index.js";
-import { getDatabaseConnection } from "./database.js";
+import { getPostgresConnection } from "./postgres-database.js";
+import type { IStatusRepository } from "./status.js";
 
 /**
- * Interface for status repository - enables both SQLite and PostgreSQL implementations
+ * PostgreSQL Repository for managing sync status and product status data
  */
-export interface IStatusRepository {
-	saveSyncResult(result: StoreSyncResult): Promise<void>;
-	getLatestSyncStatus(storeId: string): Promise<StoreSyncResult | null>;
-	startSync(storeId: string, startedAt?: Date): Promise<void>;
-	updateSyncProgress(
-		storeId: string,
-		repricedCount: number,
-		pendingCount: number,
-		unlistedCount: number,
-		errorMessage?: string,
-	): Promise<void>;
-	getSyncHistory(storeId: string, limit?: number): Promise<SyncHistoryRecord[]>;
-	updateProductStatus(
-		storeId: string,
-		platformProductId: string,
-		streetpricerProductId: string,
-		sku: string,
-		status: ProductSyncStatus,
-		currentPrice: number,
-		targetPrice: number,
-		errorMessage?: string,
-	): Promise<void>;
-	getProductStatus(
-		storeId: string,
-		status?: ProductSyncStatus,
-	): Promise<ProductStatusRecord[]>;
-	getProductStatusCounts(storeId: string): Promise<{
-		repriced: number;
-		pending: number;
-		unlisted: number;
-	}>;
-	getStoreProducts(storeId: string): Promise<ProductStatusRecord[]>;
-	clearOldProductStatus(
-		storeId: string,
-		olderThanDays?: number,
-	): Promise<number>;
-}
-
-/**
- * Repository for managing sync status and product status data (SQLite)
- */
-export class StatusRepository implements IStatusRepository {
-	constructor(private dbPath?: string) {}
-
-	private getDb(): Database.Database {
-		const connection = getDatabaseConnection(this.dbPath);
-		return connection.getDatabase();
-	}
-
+export class StatusRepositoryPostgres implements IStatusRepository {
 	/**
 	 * Save sync result to database
 	 */
 	async saveSyncResult(result: StoreSyncResult): Promise<void> {
 		try {
-			const db = this.getDb();
+			const db = getPostgresConnection();
 
 			// Determine overall status based on errors
 			let status: SyncStatus = "success";
@@ -81,40 +33,39 @@ export class StatusRepository implements IStatusRepository {
 			}
 
 			// Try to update an existing in-progress row first
-			const updateStmt = db.prepare(`
-        UPDATE sync_history
-        SET repriced_count = ?, pending_count = ?, unlisted_count = ?, status = ?, error_message = ?, completed_at = ?
-        WHERE store_id = ? AND status = 'in_progress'
-      `);
-
-			const resultInfo: Database.RunResult = updateStmt.run(
-				result.repricedCount,
-				result.pendingCount,
-				result.unlistedCount,
-				status,
-				errorMessage,
-				result.timestamp.toISOString(),
-				result.storeId,
-			);
-
-			if ((resultInfo as { changes: number }).changes === 0) {
-				// No in-progress row to update, insert a new completed row
-				const insertStmt = db.prepare(`
-          INSERT INTO sync_history (
-            store_id, repriced_count, pending_count, unlisted_count,
-            status, error_message, started_at, completed_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-
-				insertStmt.run(
-					result.storeId,
+			const updateResult = await db.query(
+				`UPDATE sync_history
+        SET repriced_count = $1, pending_count = $2, unlisted_count = $3, 
+            status = $4, error_message = $5, completed_at = $6
+        WHERE store_id = $7 AND status = 'in_progress'`,
+				[
 					result.repricedCount,
 					result.pendingCount,
 					result.unlistedCount,
 					status,
 					errorMessage,
 					result.timestamp.toISOString(),
-					result.timestamp.toISOString(),
+					result.storeId,
+				],
+			);
+
+			if (updateResult.rowCount === 0) {
+				// No in-progress row to update, insert a new completed row
+				await db.query(
+					`INSERT INTO sync_history (
+            store_id, repriced_count, pending_count, unlisted_count,
+            status, error_message, started_at, completed_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+					[
+						result.storeId,
+						result.repricedCount,
+						result.pendingCount,
+						result.unlistedCount,
+						status,
+						errorMessage,
+						result.timestamp.toISOString(),
+						result.timestamp.toISOString(),
+					],
 				);
 			}
 		} catch (error) {
@@ -129,11 +80,13 @@ export class StatusRepository implements IStatusRepository {
 	 */
 	async getLatestSyncStatus(storeId: string): Promise<StoreSyncResult | null> {
 		try {
-			const stmt = this.getDb().prepare(`
-        SELECT 
+			const db = getPostgresConnection();
+
+			const result = await db.query(
+				`SELECT 
           sh.store_id,
-          s.name as store_name,
-          s.platform,
+          s.store_name as store_name,
+          s.store_type as platform,
           sh.repriced_count,
           sh.pending_count,
           sh.unlisted_count,
@@ -142,29 +95,18 @@ export class StatusRepository implements IStatusRepository {
           sh.started_at,
           sh.completed_at
         FROM sync_history sh
-        JOIN stores s ON sh.store_id = s.id
-        WHERE sh.store_id = ?
+        JOIN stores s ON sh.store_id = s.store_id
+        WHERE sh.store_id = $1
         ORDER BY COALESCE(sh.completed_at, sh.started_at) DESC
-        LIMIT 1
-      `);
+        LIMIT 1`,
+				[storeId],
+			);
 
-			const row = stmt.get(storeId) as {
-				store_id: string;
-				store_name: string;
-				platform: string;
-				repriced_count: number;
-				pending_count: number;
-				unlisted_count: number;
-				status: string;
-				error_message: string | null;
-				started_at: string;
-				completed_at: string | null;
-			} | null;
-
-			if (!row) {
+			if (result.rows.length === 0) {
 				return null;
 			}
 
+			const row = result.rows[0];
 			let errors: SyncError[] = [];
 
 			if (row.error_message) {
@@ -222,22 +164,14 @@ export class StatusRepository implements IStatusRepository {
 		startedAt: Date = new Date(),
 	): Promise<void> {
 		try {
-			const stmt = this.getDb().prepare(`
-				INSERT INTO sync_history (
+			const db = getPostgresConnection();
+
+			await db.query(
+				`INSERT INTO sync_history (
 				  store_id, repriced_count, pending_count, unlisted_count,
 				  status, error_message, started_at, completed_at
-				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-			`);
-
-			stmt.run(
-				storeId,
-				0,
-				0,
-				0,
-				"in_progress",
-				null,
-				startedAt.toISOString(),
-				null,
+				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+				[storeId, 0, 0, 0, "in_progress", null, startedAt.toISOString(), null],
 			);
 		} catch (error) {
 			throw new Error(
@@ -257,21 +191,22 @@ export class StatusRepository implements IStatusRepository {
 		errorMessage?: string,
 	): Promise<void> {
 		try {
-			const stmt = this.getDb().prepare(`
-				UPDATE sync_history
-				SET repriced_count = ?, pending_count = ?, unlisted_count = ?, error_message = ?
-				WHERE store_id = ? AND status = 'in_progress' AND started_at = (
-				  SELECT MAX(started_at) FROM sync_history WHERE store_id = ? AND status = 'in_progress'
-				)
-			`);
+			const db = getPostgresConnection();
 
-			stmt.run(
-				repricedCount,
-				pendingCount,
-				unlistedCount,
-				errorMessage || null,
-				storeId,
-				storeId,
+			await db.query(
+				`UPDATE sync_history
+				SET repriced_count = $1, pending_count = $2, unlisted_count = $3, error_message = $4
+				WHERE store_id = $5 AND status = 'in_progress' AND started_at = (
+				  SELECT MAX(started_at) FROM sync_history WHERE store_id = $6 AND status = 'in_progress'
+				)`,
+				[
+					repricedCount,
+					pendingCount,
+					unlistedCount,
+					errorMessage || null,
+					storeId,
+					storeId,
+				],
 			);
 		} catch (error) {
 			throw new Error(
@@ -288,31 +223,20 @@ export class StatusRepository implements IStatusRepository {
 		limit: number = 10,
 	): Promise<SyncHistoryRecord[]> {
 		try {
-			const stmt = this.getDb().prepare(`
-        SELECT 
+			const db = getPostgresConnection();
+
+			const result = await db.query(
+				`SELECT 
           id, store_id, repriced_count, pending_count, unlisted_count,
           status, error_message, started_at, completed_at
         FROM sync_history
-        WHERE store_id = ?
+        WHERE store_id = $1
         ORDER BY completed_at DESC
-        LIMIT ?
-      `);
+        LIMIT $2`,
+				[storeId, limit],
+			);
 
-			type SyncHistoryRow = {
-				id: number;
-				store_id: string;
-				repriced_count: number;
-				pending_count: number;
-				unlisted_count: number;
-				status: SyncStatus;
-				error_message: string | null;
-				started_at: string;
-				completed_at: string | null;
-			};
-
-			const rows = stmt.all(storeId, limit) as SyncHistoryRow[];
-
-			return rows.map((row) => ({
+			return result.rows.map((row) => ({
 				id: row.id,
 				storeId: row.store_id,
 				repricedCount: row.repriced_count,
@@ -346,28 +270,38 @@ export class StatusRepository implements IStatusRepository {
 		errorMessage?: string,
 	): Promise<void> {
 		try {
+			const db = getPostgresConnection();
 			const now = new Date().toISOString();
 			const lastSuccess = status === "repriced" ? now : null;
 
-			const stmt = this.getDb().prepare(`
-        INSERT OR REPLACE INTO product_status (
+			await db.query(
+				`INSERT INTO product_status (
           store_id, platform_product_id, streetpricer_product_id, sku,
           status, last_attempt, last_success, error_message,
           current_price, target_price
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-			stmt.run(
-				storeId,
-				platformProductId,
-				streetpricerProductId,
-				sku,
-				status,
-				now,
-				lastSuccess,
-				errorMessage || null,
-				currentPrice,
-				targetPrice,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (store_id, platform_product_id) 
+        DO UPDATE SET
+          streetpricer_product_id = EXCLUDED.streetpricer_product_id,
+          sku = EXCLUDED.sku,
+          status = EXCLUDED.status,
+          last_attempt = EXCLUDED.last_attempt,
+          last_success = EXCLUDED.last_success,
+          error_message = EXCLUDED.error_message,
+          current_price = EXCLUDED.current_price,
+          target_price = EXCLUDED.target_price`,
+				[
+					storeId,
+					platformProductId,
+					streetpricerProductId,
+					sku,
+					status,
+					now,
+					lastSuccess,
+					errorMessage || null,
+					currentPrice,
+					targetPrice,
+				],
 			);
 		} catch (error) {
 			throw new Error(
@@ -384,42 +318,28 @@ export class StatusRepository implements IStatusRepository {
 		status?: ProductSyncStatus,
 	): Promise<ProductStatusRecord[]> {
 		try {
+			const db = getPostgresConnection();
 			let query = `
         SELECT 
           id, store_id, platform_product_id, streetpricer_product_id, sku,
           status, last_attempt, last_success, error_message,
           current_price, target_price
         FROM product_status
-        WHERE store_id = ?
+        WHERE store_id = $1
       `;
 
 			const params: unknown[] = [storeId];
 
 			if (status) {
-				query += " AND status = ?";
+				query += " AND status = $2";
 				params.push(status);
 			}
 
 			query += " ORDER BY last_attempt DESC";
 
-			const stmt = this.getDb().prepare(query);
-			type ProductStatusRow = {
-				id: number;
-				store_id: string;
-				platform_product_id: string;
-				streetpricer_product_id: string;
-				sku: string;
-				status: ProductSyncStatus;
-				last_attempt: string;
-				last_success: string | null;
-				error_message: string | null;
-				current_price: number;
-				target_price: number;
-			};
+			const result = await db.query(query, params);
 
-			const rows = stmt.all(...params) as ProductStatusRow[];
-
-			return rows.map((row) => ({
+			return result.rows.map((row) => ({
 				id: row.id,
 				storeId: row.store_id,
 				platformProductId: row.platform_product_id,
@@ -448,28 +368,25 @@ export class StatusRepository implements IStatusRepository {
 		unlisted: number;
 	}> {
 		try {
-			const db = this.getDb();
+			const db = getPostgresConnection();
 
-			const repriced = db
-				.prepare(
-					"SELECT COUNT(*) as count FROM product_status WHERE store_id = ? AND status = ?",
-				)
-				.get(storeId, "repriced") as { count: number } | null;
-			const pending = db
-				.prepare(
-					"SELECT COUNT(*) as count FROM product_status WHERE store_id = ? AND status = ?",
-				)
-				.get(storeId, "pending") as { count: number } | null;
-			const unlisted = db
-				.prepare(
-					"SELECT COUNT(*) as count FROM product_status WHERE store_id = ? AND status = ?",
-				)
-				.get(storeId, "unlisted") as { count: number } | null;
+			const repriced = await db.query(
+				"SELECT COUNT(*) as count FROM product_status WHERE store_id = $1 AND status = $2",
+				[storeId, "repriced"],
+			);
+			const pending = await db.query(
+				"SELECT COUNT(*) as count FROM product_status WHERE store_id = $1 AND status = $2",
+				[storeId, "pending"],
+			);
+			const unlisted = await db.query(
+				"SELECT COUNT(*) as count FROM product_status WHERE store_id = $1 AND status = $2",
+				[storeId, "unlisted"],
+			);
 
 			return {
-				repriced: repriced?.count || 0,
-				pending: pending?.count || 0,
-				unlisted: unlisted?.count || 0,
+				repriced: Number.parseInt(repriced.rows[0]?.count || "0"),
+				pending: Number.parseInt(pending.rows[0]?.count || "0"),
+				unlisted: Number.parseInt(unlisted.rows[0]?.count || "0"),
 			};
 		} catch (error) {
 			throw new Error(
@@ -493,16 +410,17 @@ export class StatusRepository implements IStatusRepository {
 		olderThanDays: number = 30,
 	): Promise<number> {
 		try {
+			const db = getPostgresConnection();
 			const cutoffDate = new Date();
 			cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
-			const stmt = this.getDb().prepare(`
-        DELETE FROM product_status
-        WHERE store_id = ? AND last_attempt < ?
-      `);
+			const result = await db.query(
+				`DELETE FROM product_status
+        WHERE store_id = $1 AND last_attempt < $2`,
+				[storeId, cutoffDate.toISOString()],
+			);
 
-			const result = stmt.run(storeId, cutoffDate.toISOString());
-			return result.changes;
+			return result.rowCount || 0;
 		} catch (error) {
 			throw new Error(
 				`Failed to clear old product status: ${error instanceof Error ? error.message : String(error)}`,

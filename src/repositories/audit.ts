@@ -10,7 +10,15 @@ export interface AuditLogEntry {
 	details?: string;
 }
 
-export class AuditRepository {
+/**
+ * Interface for audit repository - enables both SQLite and PostgreSQL implementations
+ */
+export interface IAuditRepository {
+	log(entry: AuditLogEntry): Promise<void>;
+	getLogs(storeId: string, limit?: number): Promise<AuditLogEntry[]>;
+}
+
+export class AuditRepository implements IAuditRepository {
 	constructor(private dbPath?: string) {}
 
 	private getDb(): Database.Database {

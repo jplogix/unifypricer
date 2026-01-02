@@ -4,7 +4,7 @@ import {
 	createStoreConfig,
 	getDecryptedCredentials,
 } from "../repositories/config";
-import type { StatusRepository } from "../repositories/status";
+import type { IStatusRepository } from "../repositories/status";
 import { Logger } from "../utils/logger.js";
 
 const logger = new Logger("StoreController");
@@ -12,7 +12,7 @@ const logger = new Logger("StoreController");
 export class StoreController {
 	constructor(
 		private configRepository: IConfigRepository,
-		private statusRepository: StatusRepository,
+		private statusRepository: IStatusRepository,
 	) {}
 
 	getAllStores = async (_req: Request, res: Response) => {

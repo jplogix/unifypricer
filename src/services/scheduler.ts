@@ -1,6 +1,6 @@
 import type { IConfigRepository } from "../repositories/config";
 import { getDecryptedCredentials } from "../repositories/config";
-import type { StatusRepository } from "../repositories/status";
+import type { IStatusRepository } from "../repositories/status";
 import type { Store } from "../types";
 import { Logger } from "../utils/logger";
 import type { SyncService } from "./sync-service";
@@ -13,7 +13,7 @@ export class SchedulerService {
 
 	constructor(
 		private configRepository: IConfigRepository,
-		private statusRepository: StatusRepository,
+		private statusRepository: IStatusRepository,
 		private syncService: SyncService,
 	) {}
 

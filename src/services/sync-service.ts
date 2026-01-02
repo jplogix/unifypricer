@@ -2,8 +2,8 @@ import { syncEventEmitter } from "../api/sync-stream-controller.js";
 import type { IShopifyClient } from "../clients/shopify.js";
 import type { IStreetPricerClient } from "../clients/streetpricer.js";
 import type { IWooCommerceClient } from "../clients/woocommerce.js";
-import type { AuditRepository } from "../repositories/audit.js";
-import type { StatusRepository } from "../repositories/status.js";
+import type { IAuditRepository } from "../repositories/audit.js";
+import type { IStatusRepository } from "../repositories/status.js";
 import type {
 	ShopifyVariant,
 	Store,
@@ -28,8 +28,8 @@ export class SyncService implements ISyncService {
 	constructor(
 		private streetPricerClient: IStreetPricerClient,
 		private productMatcher: IProductMatcher,
-		private statusRepository: StatusRepository,
-		private auditRepository: AuditRepository,
+		private statusRepository: IStatusRepository,
+		private auditRepository: IAuditRepository,
 		private platformClients: {
 			woocommerce: (creds: Record<string, unknown>) => IWooCommerceClient;
 			shopify: (creds: Record<string, unknown>) => IShopifyClient;

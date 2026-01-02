@@ -1,5 +1,6 @@
 import { Check, ExternalLink, Eye, EyeOff, Info, Loader2, Plug, X } from 'lucide-react';
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { InputWithHistory } from './InputWithHistory';
 import OAuthConnect from './OAuthConnect';
 
@@ -153,6 +154,7 @@ const QuickConnect: React.FC<QuickConnectProps> = ({ onConnect, onCancel }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* WooCommerce Card */}
               <button
+                type="button"
                 onClick={() => handlePlatformSelect('woocommerce')}
                 className="flex flex-col items-center p-6 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group"
               >
@@ -171,6 +173,7 @@ const QuickConnect: React.FC<QuickConnectProps> = ({ onConnect, onCancel }) => {
 
               {/* Shopify Card */}
               <button
+                type="button"
                 onClick={() => handlePlatformSelect('shopify')}
                 className="flex flex-col items-center p-6 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all duration-200 group"
               >
@@ -236,6 +239,7 @@ const QuickConnect: React.FC<QuickConnectProps> = ({ onConnect, onCancel }) => {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setStep('url')}
                 className="text-sm text-blue-600 hover:text-blue-700"
               >
@@ -259,11 +263,12 @@ const QuickConnect: React.FC<QuickConnectProps> = ({ onConnect, onCancel }) => {
                 />
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="consumer-secret" className="block text-sm font-medium text-gray-700 mb-1">
                     Consumer Secret
                   </label>
                   <div className="relative">
                     <input
+                      id="consumer-secret"
                       type={showSecret ? 'text' : 'password'}
                       value={credentials.consumerSecret}
                       onChange={(e) => setCredentials({ ...credentials, consumerSecret: e.target.value })}
@@ -285,10 +290,11 @@ const QuickConnect: React.FC<QuickConnectProps> = ({ onConnect, onCancel }) => {
               </>
             ) : (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="access-token" className="block text-sm font-medium text-gray-700 mb-1">
                   Admin API Access Token
                 </label>
                 <input
+                  id="access-token"
                   type="password"
                   value={credentials.accessToken}
                   onChange={(e) => setCredentials({ ...credentials, accessToken: e.target.value })}
@@ -310,7 +316,7 @@ const QuickConnect: React.FC<QuickConnectProps> = ({ onConnect, onCancel }) => {
             )}
 
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2">
-              <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+              <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
               <p className="text-xs text-blue-800">
                 These credentials allow us to securely sync your product prices.
               </p>
