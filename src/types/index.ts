@@ -140,6 +140,6 @@ export interface ProductStatusRecord {
 	lastAttempt: Date;
 	lastSuccess?: Date;
 	errorMessage?: string;
-	currentPrice: number;
-	targetPrice: number;
+	currentPrice?: number;
+	targetPrice?: number;
 }
