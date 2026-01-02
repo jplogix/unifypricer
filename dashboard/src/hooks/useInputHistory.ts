@@ -1,27 +1,29 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 interface UseInputHistoryOptions {
 	maxItems?: number;
 	storageKey: string;
 }
 
+function loadHistoryFromStorage(storageKey: string): string[] {
+	try {
+		const stored = localStorage.getItem(storageKey);
+		if (stored) {
+			const parsed = JSON.parse(stored);
+			return Array.isArray(parsed) ? parsed : [];
+		}
+	} catch (error) {
+		console.error("Failed to load input history:", error);
+	}
+	return [];
+}
+
 export function useInputHistory(options: UseInputHistoryOptions) {
 	const { maxItems = 10, storageKey } = options;
-	const [history, setHistory] = useState<string[]>([]);
+	const [history, setHistory] = useState<string[]>(() =>
+		loadHistoryFromStorage(storageKey),
+	);
 	const [showSuggestions, setShowSuggestions] = useState(false);
-
-	// Load history from localStorage on mount
-	useEffect(() => {
-		try {
-			const stored = localStorage.getItem(storageKey);
-			if (stored) {
-				const parsed = JSON.parse(stored);
-				setHistory(Array.isArray(parsed) ? parsed : []);
-			}
-		} catch (error) {
-			console.error("Failed to load input history:", error);
-		}
-	}, [storageKey]);
 
 	// Save history to localStorage
 	const saveHistory = useCallback(
