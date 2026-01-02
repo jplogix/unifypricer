@@ -84,34 +84,40 @@ const ProductList: React.FC<ProductListProps> = ({ storeId }) => {
 
             {/* Pagination Controls */}
             {products.length > 0 && totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200 sm:px-6">
-                    <div className="flex items-center gap-3">
-                        <label className="text-sm text-gray-700">Items per page:</label>
-                        <select
-                            value={itemsPerPage}
-                            onChange={(e) => {
-                                setItemsPerPage(Number(e.target.value));
-                                setCurrentPage(1);
-                            }}
-                            className="border border-gray-300 rounded-md text-sm px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value={5}>5</option>
-                            <option value={10}>10</option>
-                            <option value={25}>25</option>
-                            <option value={50}>50</option>
-                            <option value={100}>100</option>
-                        </select>
-                        <span className="text-sm text-gray-700">
-                            Showing {startIndex + 1}-{Math.min(endIndex, products.length)} of {products.length}
+                <div className="mt-4 px-4 py-3 bg-white border-t border-gray-200">
+                    {/* Top row: Items per page and showing text */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-2">
+                            <label htmlFor="items-per-page" className="text-xs font-medium text-gray-700 whitespace-nowrap">Per page:</label>
+                            <select
+                                id="items-per-page"
+                                value={itemsPerPage}
+                                onChange={(e) => {
+                                    setItemsPerPage(Number(e.target.value));
+                                    setCurrentPage(1);
+                                }}
+                                className="border border-gray-300 rounded text-xs px-2 py-1 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value={5}>5</option>
+                                <option value={10}>10</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                        </div>
+                        <span className="text-xs text-gray-600 whitespace-nowrap">
+                            {startIndex + 1}-{Math.min(endIndex, products.length)} of {products.length}
                         </span>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    {/* Bottom row: Navigation buttons */}
+                    <div className="flex items-center justify-center gap-1">
                         <button
                             type="button"
                             onClick={() => setCurrentPage(1)}
                             disabled={currentPage === 1}
-                            className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            title="First page"
+                            className="px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="First"
                         >
                             ««
                         </button>
@@ -119,29 +125,29 @@ const ProductList: React.FC<ProductListProps> = ({ storeId }) => {
                             type="button"
                             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                             disabled={currentPage === 1}
-                            className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                            className="px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-0.5"
                         >
-                            <ChevronLeft className="w-4 h-4" />
-                            Previous
+                            <ChevronLeft className="w-3 h-3" />
+                            <span className="hidden xs:inline">Prev</span>
                         </button>
-                        <span className="px-4 py-1 text-sm font-medium text-gray-700">
-                            Page {currentPage} of {totalPages}
+                        <span className="px-3 py-1 text-xs font-medium text-gray-900 bg-gray-100 border border-gray-300 rounded min-w-[80px] text-center">
+                            {currentPage} / {totalPages}
                         </span>
                         <button
                             type="button"
                             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                             disabled={currentPage === totalPages}
-                            className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                            className="px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-0.5"
                         >
-                            Next
-                            <ChevronRight className="w-4 h-4" />
+                            <span className="hidden xs:inline">Next</span>
+                            <ChevronRight className="w-3 h-3" />
                         </button>
                         <button
                             type="button"
                             onClick={() => setCurrentPage(totalPages)}
                             disabled={currentPage === totalPages}
-                            className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            title="Last page"
+                            className="px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Last"
                         >
                             »»
                         </button>

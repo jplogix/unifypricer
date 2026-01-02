@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
 import { Save, X } from 'lucide-react';
-import type { StoreConfig, StoreConfigWithCredentials } from '../types';
+import React, { useEffect, useState } from 'react';
 import { storeService } from '../services/api';
+import type { StoreConfig, StoreConfigWithCredentials } from '../types';
 
 interface StoreConfigurationProps {
     initialConfig?: StoreConfig | StoreConfigWithCredentials;
@@ -133,7 +133,7 @@ const StoreConfiguration: React.FC<StoreConfigurationProps> = ({
                             name="storeId"
                             required
                             readOnly={!!initialConfig}
-                            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border ${initialConfig ? 'bg-gray-100' : ''}`}
+                            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 ${initialConfig ? 'bg-gray-100' : 'bg-white'}`}
                             value={formData.storeId}
                             onChange={handleChange}
                             placeholder="e.g., my-store-1"
@@ -146,7 +146,7 @@ const StoreConfiguration: React.FC<StoreConfigurationProps> = ({
                             type="text"
                             name="storeName"
                             required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border bg-white text-gray-900"
                             value={formData.storeName}
                             onChange={handleChange}
                         />
@@ -156,7 +156,7 @@ const StoreConfiguration: React.FC<StoreConfigurationProps> = ({
                         <label className="block text-sm font-medium text-gray-700">Platform</label>
                         <select
                             name="platform"
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border bg-white text-gray-900"
                             value={formData.platform}
                             onChange={handleChange}
                             disabled={!!initialConfig || !!selectedPlatform}
@@ -180,7 +180,7 @@ const StoreConfiguration: React.FC<StoreConfigurationProps> = ({
                                     name="url"
                                     required
                                     placeholder="https://example.com"
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border bg-white text-gray-900 placeholder:text-gray-400"
                                     value={formData.credentials.url}
                                     onChange={handleChange}
                                 />
@@ -191,7 +191,7 @@ const StoreConfiguration: React.FC<StoreConfigurationProps> = ({
                                     type="text"
                                     name="consumerKey"
                                     required
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border bg-white text-gray-900"
                                     value={formData.credentials.consumerKey}
                                     onChange={handleChange}
                                 />
@@ -202,7 +202,7 @@ const StoreConfiguration: React.FC<StoreConfigurationProps> = ({
                                     type="password"
                                     name="consumerSecret"
                                     required
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border bg-white text-gray-900"
                                     value={formData.credentials.consumerSecret}
                                     onChange={handleChange}
                                 />
@@ -217,7 +217,7 @@ const StoreConfiguration: React.FC<StoreConfigurationProps> = ({
                                     name="shopDomain"
                                     required
                                     placeholder="shop.myshopify.com"
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border bg-white text-gray-900 placeholder:text-gray-400"
                                     value={formData.credentials.shopDomain}
                                     onChange={handleChange}
                                 />
@@ -228,7 +228,7 @@ const StoreConfiguration: React.FC<StoreConfigurationProps> = ({
                                     type="password"
                                     name="accessToken"
                                     required
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border bg-white text-gray-900"
                                     value={formData.credentials.accessToken}
                                     onChange={handleChange}
                                 />
@@ -243,7 +243,7 @@ const StoreConfiguration: React.FC<StoreConfigurationProps> = ({
                             name="syncInterval"
                             min="1"
                             required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border bg-white text-gray-900"
                             value={formData.syncInterval}
                             onChange={handleChange}
                         />
