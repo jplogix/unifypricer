@@ -154,7 +154,7 @@ export class ShopifyClient implements IShopifyClient {
 	}
 
 	/**
-	 * Fetch all products from Shopify store
+	 * Fetch all products from Shopify store using cursor-based pagination
 	 * Validates: Requirements 5.1
 	 */
 	async getAllProducts(): Promise<ShopifyProduct[]> {
@@ -166,14 +166,15 @@ export class ShopifyClient implements IShopifyClient {
 
 		try {
 			const allProducts: ShopifyProduct[] = [];
-			let sinceId = 0;
 			const limit = 250; // Shopify max per page
-			let hasMore = true;
+			let pageInfo: string | null = null;
+			let pageCount = 0;
 
-			while (hasMore) {
-				const params: { limit: number; since_id?: number } = { limit };
-				if (sinceId > 0) {
-					params.since_id = sinceId;
+			while (true) {
+				pageCount++;
+				const params: { limit: number; page_info?: string } = { limit };
+				if (pageInfo) {
+					params.page_info = pageInfo;
 				}
 
 				await this.waitForRateLimit();
@@ -185,6 +186,10 @@ export class ShopifyClient implements IShopifyClient {
 
 				const products = response.data.products;
 
+				if (products.length === 0) {
+					break; // No more products
+				}
+
 				// Transform products to internal format
 				const transformedProducts = products.map((product) =>
 					this.transformProduct(product),
@@ -192,20 +197,75 @@ export class ShopifyClient implements IShopifyClient {
 
 				allProducts.push(...transformedProducts);
 
-				// Check if there are more pages
-				hasMore = products.length === limit;
-				if (hasMore && products.length > 0) {
-					sinceId = products[products.length - 1].id;
+				console.log(
+					`[Shopify] Page ${pageCount}: Fetched ${products.length} products (${allProducts.length} total)`,
+				);
+
+				// Check for next page using Link header
+				const linkHeader = response.headers["link"] || response.headers["Link"];
+				if (!linkHeader) {
+					// No Link header means no more pages
+					break;
+				}
+
+				// Parse Link header for next page cursor
+				const nextPageInfo = this.parseNextPageInfo(linkHeader);
+				if (!nextPageInfo) {
+					// No next page found in Link header
+					break;
+				}
+
+				pageInfo = nextPageInfo;
+
+				// Safety limit to prevent infinite loops
+				if (pageCount > 1000) {
+					console.warn(
+						`[Shopify] Hit safety limit at page ${pageCount}, stopping pagination`,
+					);
+					break;
 				}
 			}
 
-			console.log(`[Shopify] Fetched ${allProducts.length} products`);
+			console.log(
+				`[Shopify] Fetched ${allProducts.length} products across ${pageCount} pages`,
+			);
 			return allProducts;
 		} catch (error) {
 			const errorMessage = this.getErrorMessage(error);
 			console.error("[Shopify] Failed to fetch products:", errorMessage);
 			throw new Error(`Failed to fetch Shopify products: ${errorMessage}`);
 		}
+	}
+
+	/**
+	 * Parse the Link header to extract the next page_info cursor
+	 * Example Link header: <https://shop.myshopify.com/admin/api/2023-10/products.json?page_info=abc123&limit=250>; rel="next"
+	 */
+	private parseNextPageInfo(linkHeader: string): string | null {
+		// Link header format: <url>; rel="next", <url>; rel="previous"
+		const links = linkHeader.split(",");
+
+		for (const link of links) {
+			const parts = link.trim().split(";");
+			if (parts.length !== 2) continue;
+
+			const rel = parts[1].trim();
+			if (!rel.includes('rel="next"') && !rel.includes("rel='next'")) continue;
+
+			// Extract URL from <...>
+			const urlMatch = parts[0].trim().match(/<(.+)>/);
+			if (!urlMatch) continue;
+
+			const url = urlMatch[1];
+
+			// Extract page_info parameter
+			const pageInfoMatch = url.match(/[?&]page_info=([^&]+)/);
+			if (pageInfoMatch) {
+				return pageInfoMatch[1];
+			}
+		}
+
+		return null;
 	}
 
 	/**

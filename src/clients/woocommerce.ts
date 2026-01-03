@@ -112,6 +112,8 @@ export class WooCommerceClient implements IWooCommerceClient {
 			let page = 1;
 			const perPage = 100; // WooCommerce max per page
 			let hasMore = true;
+			let totalProducts = 0;
+			let totalPages = 0;
 
 			while (hasMore) {
 				await this.waitForRateLimit();
@@ -127,6 +129,15 @@ export class WooCommerceClient implements IWooCommerceClient {
 
 				const products = response.data;
 
+				// Get total from headers on first request
+				if (page === 1 && response.headers) {
+					totalProducts = parseInt(response.headers["x-wp-total"] || "0", 10);
+					totalPages = parseInt(response.headers["x-wp-totalpages"] || "0", 10);
+					console.log(
+						`[WooCommerce] Total products: ${totalProducts}, Total pages: ${totalPages}`,
+					);
+				}
+
 				// Transform products to internal format
 				const transformedProducts = products.map((product) =>
 					this.transformProduct(product),
@@ -134,12 +145,31 @@ export class WooCommerceClient implements IWooCommerceClient {
 
 				allProducts.push(...transformedProducts);
 
-				// Check if there are more pages
-				hasMore = products.length === perPage;
+				console.log(
+					`[WooCommerce] Page ${page}/${totalPages || "?"}: Fetched ${products.length} products (${allProducts.length} total)`,
+				);
+
+				// Check if there are more pages - use totalPages if available, otherwise check response length
+				if (totalPages > 0) {
+					hasMore = page < totalPages;
+				} else {
+					hasMore = products.length === perPage;
+				}
+
 				page++;
+
+				// Safety limit to prevent infinite loops
+				if (page > 1000) {
+					console.warn(
+						`[WooCommerce] Hit safety limit at page ${page}, stopping pagination`,
+					);
+					break;
+				}
 			}
 
-			console.log(`[WooCommerce] Fetched ${allProducts.length} products`);
+			console.log(
+				`[WooCommerce] Fetched ${allProducts.length} products across ${page - 1} pages`,
+			);
 			return allProducts;
 		} catch (error) {
 			const errorMessage = this.getErrorMessage(error);
